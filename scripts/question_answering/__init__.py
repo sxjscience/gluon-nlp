@@ -18,8 +18,4 @@
 # under the License.
 
 # pylint: disable=wildcard-import
-"""NLP loss."""
-
-from .activation_regularizer import *
-
-__all__ = activation_regularizer.__all__
+"""Question answering example."""
