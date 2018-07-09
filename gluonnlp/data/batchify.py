@@ -76,7 +76,7 @@ def _stack_arrs(arrs, use_shared_mem=False):
     else:
         out = np.asarray(arrs)
         if use_shared_mem:
-            return mx.nd.array(out, ctx=mx.Context('cpu_shared', 0))
+            return mx.nd.array(out, ctx=mx.Context('cpu_shared', 0), dtype=arrs[0].dtype)
         else:
             return mx.nd.array(out)
 
