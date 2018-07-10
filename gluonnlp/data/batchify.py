@@ -60,8 +60,9 @@ def _pad_arrs_to_max_length(arrs, pad_axis, pad_val, use_shared_mem=False):
         else:
             slices = [slice(None) for _ in range(arr.ndim)]
             slices[pad_axis] = slice(0, arr.shape[pad_axis])
-            slices = [slice(i, i + 1)] + slices
-            ret[tuple(slices)] = arr
+            if slices[pad_axis].start != slices[pad_axis].stop:
+                slices = [slice(i, i + 1)] + slices
+                ret[tuple(slices)] = arr
     return ret, original_length
 
 
@@ -76,9 +77,9 @@ def _stack_arrs(arrs, use_shared_mem=False):
     else:
         out = np.asarray(arrs)
         if use_shared_mem:
-            return mx.nd.array(out, ctx=mx.Context('cpu_shared', 0), dtype=arrs[0].dtype)
+            return mx.nd.array(out, ctx=mx.Context('cpu_shared', 0), dtype=out.dtype)
         else:
-            return mx.nd.array(out)
+            return mx.nd.array(out, dtype=out.dtype)
 
 
 class Stack(object):
