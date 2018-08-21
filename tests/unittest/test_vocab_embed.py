@@ -461,13 +461,15 @@ def test_token_embedding_from_file(tmpdir, allow_extend):
 
 
 def test_embedding_get_and_pretrain_file_names():
-    assert len(nlp.embedding.list_sources(embedding_name='fasttext')) == 327
+    assert len(nlp.embedding.list_sources(embedding_name='fasttext')) == 484
     assert len(nlp.embedding.list_sources(embedding_name='glove')) == 10
+    assert len(nlp.embedding.list_sources(embedding_name='word2vec')) == 3
 
     reg = nlp.embedding.list_sources(embedding_name=None)
 
     assert len(reg['glove']) == 10
-    assert len(reg['fasttext']) == 327
+    assert len(reg['fasttext']) == 484
+    assert len(reg['word2vec']) == 3
 
     with pytest.raises(KeyError):
         nlp.embedding.list_sources('unknown$$')
@@ -770,11 +772,12 @@ def test_download_embed():
 
         def __init__(self, embedding_root='embedding', init_unknown_vec=nd.zeros, **kwargs):
             source = 'embedding_test'
-            Test._check_source(source)
+            Test._check_source(self.source_file_hash, source)
 
             super(Test, self).__init__(**kwargs)
 
-            file_path = Test._get_file_path(embedding_root, source)
+            file_path = Test._get_file_path(self.source_file_hash,
+                                            embedding_root, source)
 
             self._load_embedding(file_path, ' ')
 
@@ -833,8 +836,22 @@ def test_token_embedding_from_serialized_file(tmpdir):
 @pytest.mark.parametrize('unknown_token',
                          ['<strangetoken>', None, nlp._constants.UNK_TOKEN])
 def test_token_embedding_from_file_S3_with_custom_unknown_token(unknown_token):
-    embed = nlp.embedding.create('glove', source='glove.6B.50d',
-                                 unknown_token=unknown_token)
+    nlp.embedding.create('glove', source='glove.6B.50d',
+                         unknown_token=unknown_token,
+                         embedding_root='tests/data/embedding')
+
+
+@pytest.mark.parametrize('load_ngrams', [True, False])
+def test_token_embedding_from_S3_fasttext_with_ngrams(load_ngrams):
+    embed = nlp.embedding.create('fasttext', source='wiki.simple',
+                                 load_ngrams=load_ngrams, unknown_token=None,
+                                 embedding_root='tests/data/embedding')
+
+    if load_ngrams:
+        embed['$$$unknownword$$$']
+    else:
+        with pytest.raises(KeyError):
+            embed['$$$unknownword$$$']
 
 
 def test_token_embedding_unknown_lookup():
@@ -860,6 +877,13 @@ def test_token_embedding_unknown_lookup():
     assert np.all(np.isclose(0, token_embedding['hello'].asnumpy()))
     assert 'hello' in token_embedding.token_to_idx
 
+    token_embedding = nlp.embedding.token_embedding.TokenEmbedding(
+        unknown_lookup=NaiveLookup(), unknown_autoextend=True,
+        allow_extend=False)
+    assert 'hello' not in token_embedding.token_to_idx
+    assert np.all(np.isclose(0, token_embedding['hello'].asnumpy()))
+    assert 'hello' not in token_embedding.token_to_idx
+
 
 def test_token_embedding_serialization():
     @nlp.embedding.register
@@ -872,11 +896,12 @@ def test_token_embedding_serialization():
 
         def __init__(self, embedding_root='tests/data/embedding', **kwargs):
             source = 'embedding_test'
-            Test._check_source(source)
+            Test._check_source(self.source_file_hash, source)
 
             super(Test, self).__init__(**kwargs)
 
-            file_path = Test._get_file_path(embedding_root, source)
+            file_path = Test._get_file_path(self.source_file_hash,
+                                            embedding_root, source)
 
             self._load_embedding(file_path, ' ')
 
@@ -926,7 +951,8 @@ def test_word_embedding_similarity_evaluation_models(similarity_function):
     counter = nlp.data.utils.Counter(w for wpair in dataset for w in wpair[:2])
     vocab = nlp.vocab.Vocab(counter)
     vocab.set_embedding(
-        nlp.embedding.create('fasttext', source='wiki.simple'))
+        nlp.embedding.create('fasttext', source='wiki.simple',
+                             embedding_root='tests/data/embedding'))
 
     data = [[vocab[d[0]], vocab[d[1]], d[2]] for d in dataset]
     words1, words2, scores = zip(*data)
@@ -950,7 +976,8 @@ def test_word_embedding_analogy_evaluation_models(analogy_function):
     dataset = nlp.data.GoogleAnalogyTestSet()
     dataset = [d for i, d in enumerate(dataset) if i < 10]
 
-    embedding = nlp.embedding.create('fasttext', source='wiki.simple')
+    embedding = nlp.embedding.create('fasttext', source='wiki.simple',
+                                     embedding_root='tests/data/embedding')
     counter = nlp.data.utils.Counter(embedding.idx_to_token)
     vocab = nlp.vocab.Vocab(counter)
     vocab.set_embedding(embedding)
@@ -994,16 +1021,13 @@ def test_word_embedding_analogy_evaluation_models(analogy_function):
 def test_subword_function_bytes():
     sf = nlp.vocab.create_subword_function('ByteSubwords')
 
-    assert [116, 101, 115, 116] == sf([u'test'])[0].asnumpy().tolist()
-    assert [207, 132, 206, 181, 207, 131, 207, 132] == \
-        sf([u'τεστ'])[0].asnumpy().tolist()
+    assert [[116, 101, 115, 116]] == sf([u'test'])
+    assert [[207, 132, 206, 181, 207, 131, 207, 132]] == sf([u'τεστ'])
 
 
 def test_subword_function_ngramhashes():
     sf = nlp.vocab.create_subword_function('NGramHashes', ngrams=[3, 4, 5, 6],
                                            num_subwords=1000)
 
-    assert [8.0, 195.0, 271.0, 500.0, 201.0, 445.0, 379.0, 831.0, 617.0, 851.0] == \
-        sf([u'test'])[0].asnumpy().tolist()
-    assert [429.0, 793.0, 101.0, 334.0, 295.0, 474.0, 145.0, 524.0, 388.0, 790.0] == \
-        sf([u'τεστ'])[0].asnumpy().tolist()
+    assert set([8, 195, 271, 500, 201, 445, 379, 831, 617, 851]) == set(sf([u'test'])[0])
+    assert set([429, 793, 101, 334, 295, 474, 145, 524, 388, 790]) == set(sf([u'τεστ'])[0])

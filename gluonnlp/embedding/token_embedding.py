@@ -17,14 +17,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: disable=consider-iterating-dictionary
+# pylint: disable=consider-iterating-dictionary, too-many-lines
 
 """Text token embedding."""
 from __future__ import absolute_import
 from __future__ import print_function
 
-__all__ = ['register', 'create', 'list_sources',
-           'TokenEmbedding', 'GloVe', 'FastText']
+__all__ = [
+    'register', 'create', 'list_sources', 'TokenEmbedding', 'GloVe',
+    'FastText', 'Word2Vec'
+]
 
 import io
 import logging
@@ -32,11 +34,12 @@ import os
 import warnings
 
 import numpy as np
-from mxnet import nd, registry
+from mxnet import nd, registry, cpu
 from mxnet.gluon.utils import download, check_sha1, _get_repo_file_url
 
 from .. import _constants as C
 from ..data.utils import DefaultLookupDict, _get_home_dir
+from ..model.train import FasttextEmbeddingModel
 
 
 def register(embedding_cls):
@@ -75,6 +78,11 @@ def create(embedding_name, **kwargs):
     ----------
     embedding_name : str
         The token embedding name (case-insensitive).
+    kwargs : dict
+        All other keyword arguments are passed to the initializer of token
+        embedding class. For example `create(embedding_name='fasttext',
+        source='wiki.simple', load_ngrams=True)` will return
+        `FastText(source='wiki.simple', load_ngrams=True)`.
 
 
     Returns
@@ -189,28 +197,26 @@ class TokenEmbedding(object):
         self._token_to_idx.update((token, idx) for idx, token in enumerate(self._idx_to_token))
         self._idx_to_vec = None
 
-    @classmethod
-    def _get_file_url(cls, source):
-        cls_name = cls.__name__.lower()
-
+    @staticmethod
+    def _get_file_url(cls_name, source_file_hash, source):
         namespace = 'gluon/embeddings/{}'.format(cls_name)
-        return _get_repo_file_url(namespace, cls.source_file_hash[source][0])
+        return _get_repo_file_url(namespace, source_file_hash[source][0])
 
     @classmethod
-    def _get_file_path(cls, embedding_root, source):
+    def _get_file_path(cls, source_file_hash, embedding_root, source):
         cls_name = cls.__name__.lower()
         embedding_root = os.path.expanduser(embedding_root)
-        url = cls._get_file_url(source)
+        url = cls._get_file_url(cls_name, source_file_hash, source)
 
         embedding_dir = os.path.join(embedding_root, cls_name)
 
-        pretrained_file_name, expected_file_hash = cls.source_file_hash[source]
+        pretrained_file_name, expected_file_hash = source_file_hash[source]
         pretrained_file_path = os.path.join(embedding_dir, pretrained_file_name)
 
         if not os.path.exists(pretrained_file_path) \
            or not check_sha1(pretrained_file_path, expected_file_hash):
             print('Embedding file {} is not found. Downloading from Gluon Repository. '
-                  'This may time some time.'.format(pretrained_file_name))
+                  'This may take some time.'.format(pretrained_file_name))
             download(url, pretrained_file_path, sha1_hash=expected_file_hash)
 
         return pretrained_file_path
@@ -335,33 +341,24 @@ class TokenEmbedding(object):
             # is the same now as it was when the .npz was generated. Under this
             # assumption we can safely overwrite the respective token and
             # vector from the npz.
-            if deserialized_embedding.unknown_token == self.unknown_token:
-                # If the unknown_token is the same, we will find it below and a
-                # new unknown token wont be inserted.
-                idx_to_token = deserialized_embedding.idx_to_token
-                idx_to_vec = deserialized_embedding.idx_to_vec
-            elif self.unknown_token:
-                # If they are different, we need to manually replace it so that
-                # it is found below and no new unknown token would be inserted.
+            if deserialized_embedding.unknown_token:
                 idx_to_token = deserialized_embedding.idx_to_token
                 idx_to_vec = deserialized_embedding.idx_to_vec
                 idx_to_token[C.UNK_IDX] = self.unknown_token
-                vec_len = idx_to_vec.shape[1]
-                idx_to_vec[C.UNK_IDX] = self._init_unknown_vec(shape=vec_len)
+                if self._init_unknown_vec:
+                    vec_len = idx_to_vec.shape[1]
+                    idx_to_vec[C.UNK_IDX] = self._init_unknown_vec(shape=vec_len)
             else:
                 # If the TokenEmbedding shall not have an unknown token, we
                 # just delete the one in the npz.
-                idx_to_token = (
-                    deserialized_embedding.idx_to_token[:C.UNK_IDX] +
-                    deserialized_embedding.idx_to_token[C.UNK_IDX + 1:])
-                idx_to_vec = nd.concat(
-                    deserialized_embedding.idx_to_vec[:C.UNK_IDX],
-                    deserialized_embedding.idx_to_vec[C.UNK_IDX + 1:])
+                assert C.UNK_IDX == 0
+                idx_to_token = deserialized_embedding.idx_to_token[C.UNK_IDX + 1:]
+                idx_to_vec = deserialized_embedding.idx_to_vec[C.UNK_IDX + 1:]
         else:
             idx_to_token = deserialized_embedding.idx_to_token
             idx_to_vec = deserialized_embedding.idx_to_vec
 
-        if not np.all(np.unique(idx_to_token, return_counts=True)[1] == 1):
+        if not len(set(idx_to_token)) == len(idx_to_token):
             raise ValueError('Serialized embedding invalid. '
                              'It contains duplicate tokens.')
 
@@ -505,10 +502,10 @@ class TokenEmbedding(object):
 
     def __eq__(self, other):
         if isinstance(other, TokenEmbedding):
-            return self.unknown_token == other.unknown_token and np.all(
-                self.idx_to_token == other.idx_to_token) and ((
-                    self.idx_to_vec == other.idx_to_vec).min().asscalar() == 1) and (
-                        self._token_to_idx == other._token_to_idx)
+            return self.unknown_token == other.unknown_token \
+                and self.idx_to_token == other.idx_to_token and \
+                ((self.idx_to_vec == other.idx_to_vec).min().asscalar() == 1) \
+                and (self._token_to_idx == other._token_to_idx)
         else:
             return NotImplemented
 
@@ -539,7 +536,8 @@ class TokenEmbedding(object):
         if to_reduce:
             tokens = [tokens]
 
-        if self.unknown_lookup is not None and not self.unknown_autoextend:
+        if self.unknown_lookup is not None and (not self.allow_extend
+                                                or not self.unknown_autoextend):
             vecs = [
                 self.idx_to_vec[self.token_to_idx[token]]
                 if token in self.token_to_idx else self.unknown_lookup[token]
@@ -547,7 +545,7 @@ class TokenEmbedding(object):
             ]
             vecs = nd.stack(*vecs, axis=0)
         else:
-            if self.unknown_lookup is not None and self.unknown_autoextend:
+            if self.unknown_lookup is not None and self.allow_extend and self.unknown_autoextend:
                 new_tokens = [t for t in tokens if t not in self.token_to_idx]
                 self[new_tokens] = self.unknown_lookup[new_tokens]
 
@@ -641,7 +639,7 @@ class TokenEmbedding(object):
         self._idx_to_vec[nd.array(indices)] = new_embedding
 
     @classmethod
-    def _check_source(cls, source):
+    def _check_source(cls, source_file_hash, source):
         """Checks if a pre-trained token embedding source name is valid.
 
 
@@ -651,11 +649,11 @@ class TokenEmbedding(object):
             The pre-trained token embedding source.
         """
         embedding_name = cls.__name__.lower()
-        if source not in cls.source_file_hash:
+        if source not in source_file_hash:
             raise KeyError('Cannot find pre-trained source {} for token embedding {}. '
                            'Valid pre-trained file names for embedding {}: {}'.format(
                                source, embedding_name, embedding_name,
-                               ', '.join(cls.source_file_hash.keys())))
+                               ', '.join(source_file_hash.keys())))
 
     @staticmethod
     def from_file(file_path, elem_delim=' ', encoding='utf8', **kwargs):
@@ -818,6 +816,9 @@ class GloVe(TokenEmbedding):
     embedding_root : str, default '$MXNET_HOME/embedding'
         The root directory for storing embedding-related files.
         MXNET_HOME defaults to '~/.mxnet'.
+    kwargs
+        All other keyword arguments are passed to
+        `gluonnlp.embedding.TokenEmbedding`.
 
     Attributes
     ----------
@@ -834,10 +835,10 @@ class GloVe(TokenEmbedding):
 
     def __init__(self, source='glove.6B.50d',
                  embedding_root=os.path.join(_get_home_dir(), 'embedding'), **kwargs):
-        GloVe._check_source(source)
+        self._check_source(self.source_file_hash, source)
 
         super(GloVe, self).__init__(**kwargs)
-        pretrained_file_path = GloVe._get_file_path(embedding_root, source)
+        pretrained_file_path = GloVe._get_file_path(self.source_file_hash, embedding_root, source)
 
         self._load_embedding(pretrained_file_path, elem_delim=' ')
 
@@ -884,11 +885,26 @@ class FastText(TokenEmbedding):
 
     Parameters
     ----------
-    source : str, default 'glove.6B.50d'
+    source : str, default 'wiki.simple'
         The name of the pre-trained token embedding file.
     embedding_root : str, default '$MXNET_HOME/embedding'
         The root directory for storing embedding-related files.
         MXNET_HOME defaults to '~/.mxnet'.
+    load_ngrams : bool, default False
+        Load vectors for ngrams so that computing vectors for OOV words is
+        possible. This is disabled by default as it requires downloading an
+        additional 2GB file containing the vectors for ngrams. Note that
+        facebookresearch did not publish ngram vectors for all their models. If
+        load_ngrams is True, but no ngram vectors are available for the chosen
+        source this a RuntimeError is thrown. The ngram vectors are passed to
+        the resulting TokenEmbedding as `unknown_lookup`.
+    ctx : mx.Context, default mxnet.cpu()
+        Context to load the FasttextEmbeddingModel for ngram vectors to. This
+        parameter is ignored if load_ngrams is False.
+    kwargs
+        All other keyword arguments are passed to
+        `gluonnlp.embedding.TokenEmbedding`.
+
 
     Attributes
     ----------
@@ -902,12 +918,96 @@ class FastText(TokenEmbedding):
 
     # Map a pre-trained token embedding file and its SHA-1 hash.
     source_file_hash = C.FAST_TEXT_NPZ_SHA1
+    source_bin_file_hash = C.FAST_TEXT_BIN_SHA1
 
-    def __init__(self, source='wiki.simple',
+    def __init__(self, source='wiki.simple', embedding_root=os.path.join(
+            _get_home_dir(), 'embedding'), load_ngrams=False, ctx=cpu(), **kwargs):
+        self._check_source(self.source_file_hash, source)
+
+        if load_ngrams:
+            try:
+                self._check_source(self.source_bin_file_hash, source)
+            except KeyError:
+                raise KeyError(
+                    'No ngrams are available for {}. '
+                    'Ngram features were published for the following embeddings: {}'.
+                    format(source, ', '.join(self.source_bin_file_hash.keys())))
+
+            pretrained_bin_file_path = FastText._get_file_path(self.source_bin_file_hash,
+                                                               embedding_root, source)
+            unknown_lookup = FasttextEmbeddingModel.load_fasttext_format(
+                pretrained_bin_file_path, ctx=ctx)
+        else:
+            unknown_lookup = None
+
+        super(FastText, self).__init__(unknown_lookup=unknown_lookup, **kwargs)
+        pretrained_file_path = FastText._get_file_path(self.source_file_hash, embedding_root,
+                                                       source)
+
+        self._load_embedding(pretrained_file_path, elem_delim=' ')
+
+
+@register
+class Word2Vec(TokenEmbedding):
+    """The Word2Vec word embedding.
+
+    Word2Vec is an unsupervised learning algorithm for obtaining vector
+    representations for words. Training is performed with continuous
+    bag-of-words or skip-gram architecture for computing vector
+    representations of words.
+
+    References:
+
+    [1] Tomas Mikolov, Kai Chen, Greg Corrado, and Jeffrey Dean. Efficient
+    Estimation of Word Representations in Vector Space. In Proceedings of
+    Workshop at ICLR, 2013.
+
+    [2] Tomas Mikolov, Ilya Sutskever, Kai Chen, Greg Corrado, and Jeffrey
+    Dean. Distributed Representations of Words and Phrases and their
+    Compositionality. In Proceedings of NIPS, 2013.
+
+    [3] Tomas Mikolov, Wen-tau Yih, and Geoffrey Zweig. Linguistic Regularities
+    in Continuous Space Word Representations. In Proceedings of NAACL HLT,
+    2013.
+
+    Website:
+
+    https://code.google.com/archive/p/word2vec/
+
+    License for pre-trained embedding:
+
+    Unspecified
+
+    Parameters
+    ----------
+    source : str, default 'GoogleNews-vectors-negative300'
+        The name of the pre-trained token embedding file.
+    embedding_root : str, default '$MXNET_HOME/embedding'
+        The root directory for storing embedding-related files.
+        MXNET_HOME defaults to '~/.mxnet'.
+    kwargs
+        All other keyword arguments are passed to
+        `gluonnlp.embedding.TokenEmbedding`.
+
+    Attributes
+    ----------
+    idx_to_vec : mxnet.ndarray.NDArray
+        For all the indexed tokens in this embedding, this NDArray maps each token's index to an
+        embedding vector.
+    unknown_token : hashable object
+        The representation for any unknown token. In other words, any unknown token will be indexed
+        as the same representation.
+
+    """
+
+    # Map a pre-trained token embedding file and its SHA-1 hash.
+    source_file_hash = C.WORD2VEC_NPZ_SHA1
+
+    def __init__(self, source='GoogleNews-vectors-negative300',
                  embedding_root=os.path.join(_get_home_dir(), 'embedding'), **kwargs):
-        FastText._check_source(source)
+        self._check_source(self.source_file_hash, source)
 
-        super(FastText, self).__init__(**kwargs)
-        pretrained_file_path = FastText._get_file_path(embedding_root, source)
+        super(Word2Vec, self).__init__(**kwargs)
+        pretrained_file_path = self._get_file_path(self.source_file_hash, embedding_root, source)
 
         self._load_embedding(pretrained_file_path, elem_delim=' ')

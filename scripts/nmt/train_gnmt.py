@@ -56,6 +56,7 @@ from loss import SoftmaxCEMaskedLoss
 from utils import logging_config
 from bleu import compute_bleu
 import _constants as _C
+from dataset import TOY
 
 np.random.seed(100)
 random.seed(100)
@@ -199,6 +200,12 @@ def load_translation_data(dataset, src_lang='en', tgt_lang='vi'):
         data_train = IWSLT2015('train', src_lang=src_lang, tgt_lang=tgt_lang)
         data_val = IWSLT2015('val', src_lang=src_lang, tgt_lang=tgt_lang)
         data_test = IWSLT2015('test', src_lang=src_lang, tgt_lang=tgt_lang)
+    elif dataset == 'TOY':
+        common_prefix = 'TOY_{}_{}_{}_{}'.format(src_lang, tgt_lang,
+                                                 args.src_max_len, args.tgt_max_len)
+        data_train = TOY('train', src_lang=src_lang, tgt_lang=tgt_lang)
+        data_val = TOY('val', src_lang=src_lang, tgt_lang=tgt_lang)
+        data_test = TOY('test', src_lang=src_lang, tgt_lang=tgt_lang)
     else:
         raise NotImplementedError
     src_vocab, tgt_vocab = data_train.src_vocab, data_train.tgt_vocab
@@ -330,8 +337,11 @@ def train():
     """Training function."""
     trainer = gluon.Trainer(model.collect_params(), args.optimizer, {'learning_rate': args.lr})
 
-    train_batchify_fn = btf.Tuple(btf.Pad(), btf.Pad(), btf.Stack(), btf.Stack())
-    test_batchify_fn = btf.Tuple(btf.Pad(), btf.Pad(), btf.Stack(), btf.Stack(), btf.Stack())
+    train_batchify_fn = btf.Tuple(btf.Pad(), btf.Pad(),
+                                  btf.Stack(dtype='float32'), btf.Stack(dtype='float32'))
+    test_batchify_fn = btf.Tuple(btf.Pad(), btf.Pad(),
+                                 btf.Stack(dtype='float32'), btf.Stack(dtype='float32'),
+                                 btf.Stack())
     if args.bucket_scheme == 'constant':
         bucket_scheme = ConstWidthBucket()
     elif args.bucket_scheme == 'linear':
@@ -428,12 +438,13 @@ def train():
             best_valid_bleu = valid_bleu_score
             save_path = os.path.join(args.save_dir, 'valid_best.params')
             logging.info('Save best parameters to {}'.format(save_path))
-            model.save_params(save_path)
+            model.save_parameters(save_path)
         if epoch_id + 1 >= (args.epochs * 2) // 3:
             new_lr = trainer.learning_rate * args.lr_update_factor
             logging.info('Learning rate change to {}'.format(new_lr))
             trainer.set_learning_rate(new_lr)
-    model.load_params(os.path.join(args.save_dir, 'valid_best.params'))
+    if os.path.exists(os.path.join(args.save_dir, 'valid_best.params')):
+        model.load_parameters(os.path.join(args.save_dir, 'valid_best.params'))
     valid_loss, valid_translation_out = evaluate(val_data_loader)
     valid_bleu_score, _, _, _, _ = compute_bleu([val_tgt_sentences], valid_translation_out)
     logging.info('Best model valid Loss={:.4f}, valid ppl={:.4f}, valid bleu={:.2f}'

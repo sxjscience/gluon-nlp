@@ -18,13 +18,14 @@ GluonNLP: Your Choice of Deep Learning for NLP
    <a href='http://ci.mxnet.io/job/gluon-nlp/job/master/'><img src='https://img.shields.io/badge/python-2.7%2C%203.6-blue.svg'></a>
    <a href='https://codecov.io/gh/dmlc/gluon-nlp'><img src='https://codecov.io/gh/dmlc/gluon-nlp/branch/master/graph/badge.svg'></a>
    <a href='http://ci.mxnet.io/job/gluon-nlp/job/master/'><img src='http://ci.mxnet.io/job/gluon-nlp/job/master/badge/icon'></a>
+   <a href='https://pypi.org/project/gluonnlp/#history'><img src='https://img.shields.io/pypi/v/gluonnlp.svg'></a>
 
 GluonNLP is a toolkit that enables easy text preprocessing, datasets
 loading and neural models building to help you speed up your Natural
 Language Processing (NLP) research.
 
-- `Quick Start Guide <#quick-start-guide>`__
-- `Resources <#resources>`__
+- `Quick Start Guide <https://github.com/dmlc/gluon-nlp#quick-start-guide>`__
+- `Resources <https://github.com/dmlc/gluon-nlp#resources>`__
 
 Installation
 ============
@@ -38,7 +39,7 @@ You can install ``MXNet`` and ``GluonNLP`` using pip:
     pip install gluonnlp
 
 Docs 📖
-======
+=======
 
 GluonNLP documentation is available at `our
 website <http://gluon-nlp.mxnet.io/master/index.html>`__.
@@ -61,7 +62,7 @@ guide <http://gluon-nlp.mxnet.io/master/how_to/contribute.html>`__ to get
 to know about our development procedure, how to propose bug fixes and
 improvements, as well as how to build and test your changes to GluonNLP.
 
-Join our `contributors <contributor.rst>`__.
+Join our `contributors <https://github.com/dmlc/gluon-nlp/blob/master/contributor.rst>`__.
 
 Resources
 =========
@@ -109,7 +110,7 @@ Build vocabulary based on the above dataset, for example:
 `Neural Models Building <http://gluon-nlp.mxnet.io/master/api/model.html>`__
 -----------------------------------------------------------------------------------
 
-From the models package, apply an Standard RNN langauge model to the
+From the models package, apply a Standard RNN language model to the
 above dataset:
 
 .. code:: python

@@ -24,13 +24,14 @@ __all__ = ['EmbeddingModel', 'SimpleEmbeddingModel', 'FasttextEmbeddingModel']
 
 import logging
 import struct
+import warnings
 
 import numpy as np
 from mxnet import cpu, nd
 from mxnet.gluon import Block, HybridBlock, nn
 
-from ...vocab import create_subword_function
 from ...base import _str_types
+from ...vocab.subwords import create_subword_function
 
 
 class EmbeddingModel(Block):
@@ -283,11 +284,27 @@ class FasttextEmbeddingModel(EmbeddingModel):
                                             len(idx_to_token))
 
         token_to_idx = {token: idx for idx, token in enumerate(idx_to_token)}
+        if len(token_to_idx) != len(idx_to_token):
+            # If multiple tokens with invalid encoding were collapsed in a
+            # single token due to replacement of invalid bytes with Unicode
+            # replacement character
+            warnings.warn(
+                'There are duplicate tokens in the embedding file. '
+                'This is likely due to decoding errors for some tokens, '
+                'where invalid bytes were replaced by '
+                'the Unicode replacement character. '
+                'This affects {} tokens.'.format(
+                    len(idx_to_token) - len(token_to_idx)))
+            for _ in range(len(token_to_idx), len(idx_to_token)):
+                # Add pseudo tokens to make sure length is the same
+                token_to_idx[object()] = -1
+        assert len(token_to_idx) == len(idx_to_token)
+
         word_idx_to_vec = nd.array(matrix[:len(idx_to_token)])
         subword_idx_to_vec = nd.array(matrix[len(idx_to_token):])
         subword_function = create_subword_function(
             'NGramHashes', num_subwords=subword_idx_to_vec.shape[0],
-            ngrams=list(range(minn, maxn + 1)), special_tokens='</s>')
+            ngrams=list(range(minn, maxn + 1)), special_tokens={'</s>'})
 
         self = cls(token_to_idx, subword_function, embedding_size=dim,
                    **kwargs)
@@ -317,8 +334,11 @@ class FasttextEmbeddingModel(EmbeddingModel):
     def _read_vocab(cls, file_handle, new_format, encoding='utf8'):
         vocab_size, nwords, nlabels = cls._struct_unpack(file_handle, '@3i')
         if nlabels > 0:
-            raise NotImplementedError(
-                'Provided model is not a word embeddings model.')
+            warnings.warn((
+                'Provided model contains labels (nlabels={})'
+                'This indicates you are either not using a word embedding model '
+                'or that the model was created with a buggy version of fasttext. '
+                'Ignoring all labels.').format(nlabels))
         logging.info('Loading %s words from fastText model.', vocab_size)
 
         cls._struct_unpack(file_handle, '@1q')  # number of tokens
@@ -333,13 +353,17 @@ class FasttextEmbeddingModel(EmbeddingModel):
             while char_byte != b'\x00':
                 word_bytes += char_byte
                 char_byte = file_handle.read(1)
-            word = word_bytes.decode(encoding)
-            _, _ = cls._struct_unpack(file_handle, '@qb')
-
+            # 'surrogateescape' would be better but only available in Py3
+            word = word_bytes.decode(encoding, errors='replace')
+            _, entry_type = cls._struct_unpack(file_handle, '@qb')
+            if entry_type:
+                # Skip incorrectly included labels (affects wiki.fr)
+                assert nlabels > 0
+                continue
             idx_to_token.append(word)
 
         assert len(idx_to_token) == nwords, \
-            'Mismatch between words in pretrained model file ({} words), ' \
+            'Mismatch between words in pre-trained model file ({} words), ' \
             'and expected number of words ({} words)'.format(len(idx_to_token), nwords)
 
         if new_format:
@@ -377,8 +401,8 @@ class FasttextEmbeddingModel(EmbeddingModel):
     def __contains__(self, token):
         # supports computing vector for any str that is at least either in the
         # word level vocabulary or contains subwords
-        return (token in self.idx_to_token
-                or self.subword_function([token])[0].shape[0])
+        return (token in self.token_to_idx
+                or self.subword_function([token])[0])
 
     def __getitem__(self, tokens):
         """Looks up embedding vectors of text tokens.
@@ -412,13 +436,14 @@ class FasttextEmbeddingModel(EmbeddingModel):
             else:
                 word = nd.array([0], ctx=ctx)
                 wordmask = nd.zeros_like(word)
-            subwords = self.subword_function([token])[0].expand_dims(0)
-            subwords = subwords.as_in_context(ctx)
+            subwords = nd.array(self.subword_function([token]), ctx=ctx)
             if subwords.shape[1]:
                 vec = self(word, subwords, wordsmask=wordmask)
+            elif token not in self.token_to_idx:
+                assert token not in self  # Assert consistency with __contains__
+                raise KeyError
             else:
-                # token is a special_token and subwords are not taken into account
-                assert token in self.token_to_idx
+                # Known tokens (eg. special token such as EOS) without subwords
                 vec = self.embedding(word)
 
             vecs.append(vec)

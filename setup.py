@@ -55,13 +55,13 @@ setup(
         'extras': [
             'spacy',
             'nltk==3.2.5',
+            'sacremoses',
             'scipy',
             'numba',
             'jieba',
         ],
         'dev': [
             'pytest',
-            'pytest-datadir',
             'recommonmark',
             'sphinx-gallery',
             'sphinx_rtd_theme',

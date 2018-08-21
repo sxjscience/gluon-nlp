@@ -17,8 +17,8 @@
 # specific language governing permissions and limitations
 # under the License.
 # pylint: disable=logging-too-many-args
-"""Evaluation of pretrained word embeddings
-===========================================
+"""Evaluation of pre-trained word embeddings
+============================================
 
 This example shows how to load and perform intrinsic evaluation of word
 embeddings using a variety of datasets all part of the Gluon NLP Toolkit.
@@ -57,7 +57,7 @@ def get_args():
                              'valid sources for a given --embedding-name.'))
     group.add_argument(
         '--max-vocab-size', type=int, default=None,
-        help=('Only retain the X first tokens from the pretrained embedding. '
+        help=('Only retain the X first tokens from the pre-trained embedding. '
               'The tokens are ordererd by decreasing frequency.'
               'As the analogy task takes the whole vocabulary into account, '
               'removing very infrequent words improves performance.'))
@@ -112,12 +112,12 @@ def validate_args(args):
               'word embeddings from a Word2Vec text format '
               'or fastText binary format file')
         print('Use --embedding-name or to download one of '
-              'the pretrained embedding files included in GluonNLP.')
+              'the pre-trained embedding files included in GluonNLP.')
         sys.exit(1)
 
     if args.embedding_name and not args.embedding_source:
         print('Please also specify --embedding-source'
-              ' to select the version of the pretrained embedding. '
+              ' to select the version of the pre-trained embedding. '
               'Use --list-embedding-sources to see all available sources')
         sys.exit(1)
 
@@ -138,13 +138,16 @@ def load_embedding_from_path(args):
             filter(lambda x: x in model,
                    evaluation.get_tokens_in_evaluation_datasets(args)))
 
+        if args.analogy_datasets:
+            token_set.update(model.token_to_idx.keys())
+
         # OOV words will be imputed and added to the
         # token_embedding.idx_to_token etc.
         with utils.print_time('compute vectors from subwords '
                               'for {} words.'.format(len(token_set))):
             embedding = nlp.embedding.TokenEmbedding(unknown_token=None,
                                                      allow_extend=True)
-            idx_to_tokens = list(token_set)
+            idx_to_tokens = [t for t in token_set if t in model]
             embedding[idx_to_tokens] = model[idx_to_tokens]
 
     else:
@@ -159,12 +162,13 @@ if __name__ == '__main__':
 
     args_ = get_args()
     ctx = utils.get_context(args_)[0]
-    os.makedirs(args_.logdir, exist_ok=True)
+    if not os.path.isdir(args_.logdir):
+        os.makedirs(args_.logdir)
 
-    # Load pretrained embeddings
-    print('Loading embedding ', args_.embedding_name, ' from ',
-          args_.embedding_source)
+    # Load pre-trained embeddings
     if not args_.embedding_path:
+        print('Loading embedding ', args_.embedding_name, ' from ',
+              args_.embedding_source)
         token_embedding = nlp.embedding.create(args_.embedding_name,
                                                source=args_.embedding_source)
         name = '-' + args_.embedding_name + '-' + args_.embedding_source
