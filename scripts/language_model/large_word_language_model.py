@@ -83,7 +83,7 @@ parser.add_argument('--gpus', type=str,
                     help='list of gpus to run, e.g. 0 or 0,2,5. empty means using cpu.')
 parser.add_argument('--log-interval', type=int, default=1000,
                     help='report interval')
-parser.add_argument('--seed', type=int, default=1,
+parser.add_argument('--seed', type=int, default=0,
                     help='random seed')
 parser.add_argument('--lr', type=float, default=0.2,
                     help='initial learning rate')
@@ -127,8 +127,10 @@ train_data_stream, test_data_stream = \
 vocab = train_data_stream.vocab
 ntokens = len(vocab)
 
+# Sampler for generating negative classes during training with importance sampling
 sampler = LogUniformSampler(ntokens, args.k)
 
+# Given a list of (array, context) pairs, load array[i] on context[i]
 def _load(xs):
     ret = []
     for x, ctx in zip(xs, context):
@@ -138,6 +140,11 @@ def _load(xs):
             ret.append(x.as_in_context(ctx))
     return ret
 
+# Transformation for a data batch for training.
+# First, load the data, target and mask to target contexts.
+# Second, the LSTM-2048-512 model performs importance sampling for decoding
+# during training, we need to sample negative candidate classes by invoking the
+# log uniform sampler.
 def _split_and_sample(x, y):
     m = x != vocab[vocab.padding_token]  # mask padding
     num_ctx = len(context)

@@ -21,28 +21,15 @@ from __future__ import print_function
 
 import itertools
 import os
-
 import pytest
-
 import gluonnlp as nlp
 
+@pytest.mark.serial
+def test_corpus_stream(
+        stream_identity_wrappers,
+        wikitext2_simpledatasetstream_skipempty_flatten_and_counter):
+    stream, _ = wikitext2_simpledatasetstream_skipempty_flatten_and_counter
 
-def test_corpus_stream(stream_identity_wrappers):
-    EOS = nlp._constants.EOS_TOKEN
-    path = os.path.join('tests', 'data', 'wikitext-2')
-    token_path = os.path.join('tests', 'data', 'wikitext-2/*.tokens')
-
-    # Make sure train, val and test files exist at given path
-    train = nlp.data.WikiText2(segment='train', root=path)
-    val = nlp.data.WikiText2(segment='val', root=path)
-    test = nlp.data.WikiText2(segment='test', root=path)
-
-    stream = nlp.data.SimpleDatasetStream(
-        nlp.data.CorpusDataset,
-        token_path,
-        flatten=True,
-        skip_empty=True,
-        eos=EOS)
     stream = stream_identity_wrappers(stream)
     counter = nlp.data.Counter(itertools.chain.from_iterable(stream))
     assert len(counter) == 33278, len(counter)
@@ -55,11 +42,16 @@ def test_corpus_stream(stream_identity_wrappers):
     assert len(counter) == 33278, len(counter)
 
 
+@pytest.mark.serial
 def test_lazy_stream(stream_identity_wrappers):
     EOS = nlp._constants.EOS_TOKEN
     path = os.path.join('tests', 'data', 'wikitext-2')
     token_path = os.path.join('tests', 'data', 'wikitext-2/*test*.tokens')
     corpus = nlp.data.WikiText2(segment='test', root=path)
+
+    # We don't use wikitext2_simpledatasetstream_skipempty_flatten_and_counter
+    # here as there is no need to work on more than the 'test' segment. The
+    # fixture goes over all segments.
     stream = nlp.data.SimpleDatasetStream(
         nlp.data.CorpusDataset,
         token_path,
@@ -82,6 +74,7 @@ def test_lazy_stream(stream_identity_wrappers):
 
 @pytest.mark.parametrize('num_prefetch', [0, 1, 10])
 @pytest.mark.parametrize('worker_type', ['thread', 'process'])
+@pytest.mark.serial
 def test_prefetch_stream(num_prefetch, worker_type):
     EOS = nlp._constants.EOS_TOKEN
     path = os.path.join('tests', 'data', 'wikitext-2')
