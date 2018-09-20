@@ -29,7 +29,6 @@ mx.random.seed(10000)
 ctx = mx.gpu(0)
 
 # parameters for dataset
-CACHE_PATH = scripts.nmt._constants.CACHE_PATH
 dataset = 'IWSLT2015'
 src_lang, tgt_lang = 'en', 'vi'
 src_max_len, tgt_max_len = 50, 50
@@ -75,15 +74,15 @@ def cache_dataset(dataset, prefix):
     dataset : gluon.data.SimpleDataset
     file_path : str
     """
-    if not os.path.exists(CACHE_PATH):
-        os.makedirs(CACHE_PATH)
+    if not os.path.exists(nmt._constants.CACHE_PATH):
+        os.makedirs(nmt._constants.CACHE_PATH)
     src_data = np.array([ele[0] for ele in dataset])
     tgt_data = np.array([ele[1] for ele in dataset])
-    np.savez(os.path.join(CACHE_PATH, prefix + '.npz'), src_data=src_data, tgt_data=tgt_data)
+    np.savez(os.path.join(nmt._constants.CACHE_PATH, prefix + '.npz'), src_data=src_data, tgt_data=tgt_data)
 
 
 def load_cached_dataset(prefix):
-    cached_file_path = os.path.join(CACHE_PATH, prefix + '.npz')
+    cached_file_path = os.path.join(nmt._constants.CACHE_PATH, prefix + '.npz')
     if os.path.exists(cached_file_path):
         print('Load cached data from {}'.format(cached_file_path))
         dat = np.load(cached_file_path)
@@ -282,30 +281,29 @@ feed the encoder and decoder to `NMTModel` to construct the GNMT model.
 `model.hybridize` allows computation to be done using the symbolic backend.
 
 ```python
-encoder, decoder = scripts.nmt.gnmt.get_gnmt_encoder_decoder(hidden_size=num_hidden,
-                                                             dropout=dropout,
-                                                             num_layers=num_layers,
-                                                             num_bi_layers=num_bi_layers)
-model = scripts.nmt.translation.NMTModel(src_vocab=src_vocab, tgt_vocab=tgt_vocab,
-                                         encoder=encoder, decoder=decoder,
-                                         embed_size=num_hidden, prefix='gnmt_')
+encoder, decoder = nmt.gnmt.get_gnmt_encoder_decoder(hidden_size=num_hidden,
+                                                     dropout=dropout,
+                                                     num_layers=num_layers,
+                                                     num_bi_layers=num_bi_layers)
+model = nmt.translation.NMTModel(src_vocab=src_vocab, tgt_vocab=tgt_vocab, encoder=encoder, decoder=decoder,
+                                 embed_size=num_hidden, prefix='gnmt_')
 model.initialize(init=mx.init.Uniform(0.1), ctx=ctx)
 static_alloc = True
 model.hybridize(static_alloc=static_alloc)
 logging.info(model)
 
 # Due to the paddings, we need to mask out the losses corresponding to padding tokens.
-loss_function = scripts.nmt.loss.SoftmaxCEMaskedLoss()
+loss_function = nmt.loss.SoftmaxCEMaskedLoss()
 loss_function.hybridize(static_alloc=static_alloc)
 ```
 
 We also build the beam search translator.
 
 ```python
-translator = scripts.nmt.translation.BeamSearchTranslator(model=model, beam_size=beam_size,
-                                                          scorer=nlp.model.BeamSearchScorer(alpha=lp_alpha,
-                                                                                            K=lp_k),
-                                                          max_length=tgt_max_len + 100)
+translator = nmt.translation.BeamSearchTranslator(model=model, beam_size=beam_size,
+                                                  scorer=nlp.model.BeamSearchScorer(alpha=lp_alpha,
+                                                                                    K=lp_k),
+                                                  max_length=tgt_max_len + 100)
 logging.info('Use beam_size={}, alpha={}, K={}'.format(beam_size, lp_alpha, lp_k))
 ```
 
@@ -423,11 +421,11 @@ for epoch_id in range(epochs):
             log_avg_gnorm = 0
             log_wc = 0
     valid_loss, valid_translation_out = evaluate(val_data_loader)
-    valid_bleu_score, _, _, _, _ = scripts.nmt.bleu.compute_bleu([val_tgt_sentences], valid_translation_out)
+    valid_bleu_score, _, _, _, _ = nmt.bleu.compute_bleu([val_tgt_sentences], valid_translation_out)
     logging.info('[Epoch {}] valid Loss={:.4f}, valid ppl={:.4f}, valid bleu={:.2f}'
                  .format(epoch_id, valid_loss, np.exp(valid_loss), valid_bleu_score * 100))
     test_loss, test_translation_out = evaluate(test_data_loader)
-    test_bleu_score, _, _, _, _ = scripts.nmt.bleu.compute_bleu([test_tgt_sentences], test_translation_out)
+    test_bleu_score, _, _, _, _ = nmt.bleu.compute_bleu([test_tgt_sentences], test_translation_out)
     logging.info('[Epoch {}] test Loss={:.4f}, test ppl={:.4f}, test bleu={:.2f}'
                  .format(epoch_id, test_loss, np.exp(test_loss), test_bleu_score * 100))
     write_sentences(valid_translation_out,
