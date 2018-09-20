@@ -17,7 +17,7 @@ import numpy as np
 import mxnet as mx
 from mxnet import gluon
 import gluonnlp as nlp
-import scripts
+import scripts.nmt as nmt
 ```
 
 ## Hyper-parameters
