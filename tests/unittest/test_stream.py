@@ -25,6 +25,7 @@ import pytest
 import gluonnlp as nlp
 
 @pytest.mark.serial
+@pytest.mark.remote_required
 def test_corpus_stream(
         stream_identity_wrappers,
         wikitext2_simpledatasetstream_skipempty_flatten_and_counter):
@@ -43,6 +44,7 @@ def test_corpus_stream(
 
 
 @pytest.mark.serial
+@pytest.mark.remote_required
 def test_lazy_stream(stream_identity_wrappers):
     EOS = nlp._constants.EOS_TOKEN
     path = os.path.join('tests', 'data', 'wikitext-2')
@@ -75,6 +77,7 @@ def test_lazy_stream(stream_identity_wrappers):
 @pytest.mark.parametrize('num_prefetch', [0, 1, 10])
 @pytest.mark.parametrize('worker_type', ['thread', 'process'])
 @pytest.mark.serial
+@pytest.mark.remote_required
 def test_prefetch_stream(num_prefetch, worker_type):
     EOS = nlp._constants.EOS_TOKEN
     path = os.path.join('tests', 'data', 'wikitext-2')
@@ -93,3 +96,45 @@ def test_prefetch_stream(num_prefetch, worker_type):
         for x in corpus:
             y = next(prefetch_corpus_iter)
             assert all([sx == sy for sx, sy in zip(x, y)])
+
+
+class EagerIterWorksException(Exception):
+    pass
+
+
+@pytest.mark.parametrize('transform', [True, False])
+def test_eager_iter_lazytransform(transform, stream_identity_wrappers):
+    """Test that calling iter(stream.transform(fn)) eagerly calls iter(stream).
+
+    If this test fails, PrefetchingStream(stream.transform(fn)) will not do any
+    prefetching until next(iter(stream.transform(fn))) is called.
+
+    """
+
+    class ExceptionStream(nlp.data.DataStream):
+        def __iter__(self):
+            raise EagerIterWorksException
+
+    stream = stream_identity_wrappers(ExceptionStream())
+    if transform:
+        stream = stream.transform(lambda x: x)
+
+    with pytest.raises(EagerIterWorksException):
+        iter(stream)
+
+@pytest.mark.serial
+@pytest.mark.remote_required
+def test_dataset_stream_sampler():
+    path = os.path.join('tests', 'data', 'wikitext-2')
+    token_path = os.path.join('tests', 'data', 'wikitext-2/*.tokens')
+    test = nlp.data.WikiText2(segment='test', root=path)
+    num_parts = 2
+    lengths = []
+    for part_idx in range(num_parts):
+        sampler = nlp.data.SplitSampler(3, num_parts, part_idx)
+        corpus = nlp.data.SimpleDatasetStream(
+            nlp.data.CorpusDataset, token_path, sampler)
+        for c in corpus:
+            assert len(c) not in lengths
+            lengths.append(len(c))
+    assert len(lengths) == 3

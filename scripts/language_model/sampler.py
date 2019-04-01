@@ -18,10 +18,10 @@
 
 import math
 import numpy as np
-from mxnet import ndarray
-from gluonnlp.data import CandidateSampler
+from mxnet import ndarray, gluon
 
-class LogUniformSampler(CandidateSampler):
+
+class LogUniformSampler(gluon.block.Block):
     """Draw random samples from an approximately log-uniform or Zipfian distribution.
 
     This operation randomly samples *num_sampled* candidates the range of integers [0, range_max).
@@ -36,8 +36,13 @@ class LogUniformSampler(CandidateSampler):
     For example, if the classes represent words in a lexicon sorted in decreasing order of
     frequency. If your classes are not ordered by decreasing frequency, do not use this op.
 
-    Additionaly, it also returns the number of times each of the
+    Additionally, it also returns the number of times each of the
     true classes and the sampled classes is expected to occur.
+
+    As the candidates are drawn without replacement, the expected count for the sampled candidates
+    and true classes are approximated. If the candidates are drawn with `num_tries` draws, we assume
+    (falsely) that the number of tries to get a batch of batch_size distinct values is always
+    `num_tries`, and the probability that the value is in a batch is 1 - (1-p)**num_tries.
 
     Parameters
     ----------
@@ -48,7 +53,8 @@ class LogUniformSampler(CandidateSampler):
     dtype: str or np.dtype
         The dtype for outputs
     """
-    def __init__(self, range_max, num_sampled, dtype=None):
+    def __init__(self, range_max, num_sampled, dtype=None, **kwargs):
+        super(LogUniformSampler, self).__init__(**kwargs)
         self._num_sampled = num_sampled
         self._log_range = math.log(range_max + 1)
         self._dtype = np.float32 if dtype is None else dtype
@@ -57,7 +63,7 @@ class LogUniformSampler(CandidateSampler):
     def _prob_helper(self, num_tries, prob):
         return (num_tries.astype('float64') * (-prob).log1p()).expm1() * -1
 
-    def __call__(self, true_classes):
+    def forward(self, true_classes):
         """Draw samples from log uniform distribution and returns sampled candidates,
         expected count for true classes and sampled classes.
 

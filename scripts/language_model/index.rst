@@ -1,5 +1,7 @@
 Language Model
--------------------
+--------------
+
+:download:`[Download] </model_zoo/language_model.zip>`
 
 Word Language Model
 ~~~~~~~~~~~~~~~~~~~~
@@ -7,11 +9,9 @@ Word Language Model
 Reference: Merity, S., et al. "`Regularizing and optimizing LSTM language models <https://openreview.net/pdf?id=SyyGPP0TZ>`_". ICLR 2018
 
 
-:download:`[Download] </model_zoo/language_model.zip>`
-
 The key features used to reproduce the results for pre-trained models are listed in the following tables.
 
-.. editting URL for the following table: https://bit.ly/2PHSHvc
+.. editing URL for the following table: https://bit.ly/2PHSHvc
 
 The dataset used for training the models is wikitext-2.
 
@@ -84,7 +84,7 @@ Reference: Grave, E., et al. "`Improving neural language models with a continuou
 
 The key features used to reproduce the results based on the corresponding pre-trained models are listed in the following tables.
 
-.. editting URL for the following table: https://bit.ly/2NkpklU
+.. editing URL for the following table: https://bit.ly/2NkpklU
 
 The dataset used for training the models is wikitext-2.
 
@@ -141,7 +141,7 @@ Reference: Jozefowicz, Rafal, et al. "`Exploring the limits of language modeling
 
 The key features used to reproduce the results for pre-trained models are listed in the following tables.
 
-.. editting URL for the following table: https://bit.ly/2w28VXS
+.. editing URL for the following table: https://bit.ly/2w28VXS
 
 The dataset used for training the models is Google's 1 billion words dataset.
 
@@ -166,7 +166,7 @@ The dataset used for training the models is Google's 1 billion words dataset.
 +-----------------+------------------------------------------------------------------------------------------------------------------------------+
 | Batch size      | 128                                                                                                                          |
 +-----------------+------------------------------------------------------------------------------------------------------------------------------+
-| Graident clip   | 10.0                                                                                                                         |
+| Gradient clip   | 10.0                                                                                                                         |
 +-----------------+------------------------------------------------------------------------------------------------------------------------------+
 | Test perplexity | 43.62                                                                                                                        |
 +-----------------+------------------------------------------------------------------------------------------------------------------------------+

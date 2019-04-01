@@ -3,8 +3,8 @@ Text Generation
 
 :download:`[Download] </model_zoo/text_generation.zip>`
 
-Through Sampling a Language Model
-+++++++++++++++++++++++++++++++++
+Sampling a Language Model
++++++++++++++++++++++++++
 
 This script can be used to generate sentences using beam search or a sequence sampler, to sample from a pre-trained language model.
 
@@ -21,7 +21,7 @@ Output is
 
 .. code-block:: console
 
-   Beam Seach Parameters: beam_size=5, alpha=0.0, K=5
+   Beam Search Parameters: beam_size=5, alpha=0.0, K=5
    Generation Result:
    [u'I love it .', -1.1241297]
    [u'I love it " .', -4.001592]
@@ -39,7 +39,7 @@ Output is
 
 .. code-block:: console
 
-   Beam Seach Parameters: beam_size=15, alpha=0.0, K=5
+   Beam Search Parameters: beam_size=15, alpha=0.0, K=5
    Generation Result:
    [u'I love it .', -1.1241297]
    [u'I love it " .', -4.001592]

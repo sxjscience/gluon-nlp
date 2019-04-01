@@ -1,6 +1,6 @@
 .. raw:: html
 
-   <a href="http://gluon-nlp.mxnet.io/master/index.html"><p align="center"><img width="25%" src="docs/_static/gluon_s2.png" /></a>
+   <a href="http://gluon-nlp.mxnet.io/master/index.html"><p align="center"><img width="25%" src="https://github.com/dmlc/gluon-nlp/raw/be3bc8852155e935d68d397e0743715c54c3ce76/docs/_static/gluon_s2.png" /></a>
    </p>
 
 .. raw:: html
@@ -30,18 +30,42 @@ Language Processing (NLP) research.
 News
 ====
 
-- GluonNLP was featured in **KDD 2018 London, Apache MXNet Gluon tutorial**! Check out **https://kdd18.mxnet.io**.
+- Tutorial proposal for GluonNLP is accepted at `EMNLP 2019 <https://www.emnlp-ijcnlp2019.org>`__, Hong Kong.
+
+- GluonNLP was featured in:
+
+  - **AWS re:invent 2018 in Las Vegas, 2018-11-28**! Checkout `details <https://www.portal.reinvent.awsevents.com/connect/sessionDetail.ww?SESSION_ID=88736>`_.
+  - **PyData 2018 NYC, 2018-10-18**! Checkout the `awesome talk <https://pydata.org/nyc2018/schedule/presentation/76/>`__ by Sneha Jha.
+  - **KDD 2018 London, 2018-08-21, Apache MXNet Gluon tutorial**! Check out **https://kdd18.mxnet.io**.
 
 Installation
 ============
 
 Make sure you have Python 2.7 or Python 3.6 and recent version of MXNet.
-You can install ``MXNet`` and ``GluonNLP`` using pip:
+You can install ``MXNet`` and ``GluonNLP`` using pip.
+
+``GluonNLP`` is based on the most recent version of ``MXNet``.
+
+
+In particular, if you want to install the most recent ``MXNet`` release:
+
+::
+
+    pip install --upgrade mxnet>=1.4.0
+
+Else, if you want to install the most recent ``MXNet`` nightly build:
 
 ::
 
     pip install --pre --upgrade mxnet
+
+Then, you can install ``GluonNLP``:
+
+::
+
     pip install gluonnlp
+
+Please check more `installation details <https://github.com/dmlc/gluon-nlp/blob/master/docs/install.rst>`_.
 
 Docs 📖
 =======
@@ -104,8 +128,8 @@ For experienced users, check out our
 Quick Start Guide
 =================
 
-`Dataset Loading <http://gluon-nlp.mxnet.io/master/api/data.html>`__
--------------------------------------------------------------------------------------
+`Dataset Loading <http://gluon-nlp.mxnet.io/master/api/notes/data_api.html>`__
+-------------------------------------------------------------------------------
 
 Load the Wikitext-2 dataset, for example:
 
@@ -116,8 +140,8 @@ Load the Wikitext-2 dataset, for example:
     >>> train[0][0:5]
     ['=', 'Valkyria', 'Chronicles', 'III', '=']
 
-`Vocabulary Construction <http://gluon-nlp.mxnet.io/master/api/vocab.html>`__
----------------------------------------------------------------------------------
+`Vocabulary Construction <http://gluon-nlp.mxnet.io/master/api/modules/vocab.html>`__
+-------------------------------------------------------------------------------------
 
 Build vocabulary based on the above dataset, for example:
 
@@ -127,8 +151,8 @@ Build vocabulary based on the above dataset, for example:
     >>> vocab
     Vocab(size=33280, unk="<unk>", reserved="['<pad>', '<bos>', '<eos>']")
 
-`Neural Models Building <http://gluon-nlp.mxnet.io/master/api/model.html>`__
------------------------------------------------------------------------------------
+`Neural Models Building <http://gluon-nlp.mxnet.io/master/api/modules/model.html>`__
+------------------------------------------------------------------------------------
 
 From the models package, apply a Standard RNN language model to the
 above dataset:
@@ -149,8 +173,8 @@ above dataset:
       )
     )
 
-`Word Embeddings Loading <http://gluon-nlp.mxnet.io/master/api/embedding.html>`__
----------------------------------------------------------------------------------
+`Word Embeddings Loading <http://gluon-nlp.mxnet.io/master/api/modules/embedding.html>`__
+-----------------------------------------------------------------------------------------
 
 For example, load a GloVe word embedding, one of the state-of-the-art
 English word embeddings:
@@ -163,3 +187,9 @@ English word embeddings:
     <class 'mxnet.ndarray.ndarray.NDArray'>
     >>> glove['baby'].shape
     (50,)
+
+
+New to Deep Learning or NLP?
+============================
+
+For background knowledge of deep learning or NLP, please refer to the open source book `Dive into Deep Learning <http://en.diveintodeeplearning.org/>`__.
