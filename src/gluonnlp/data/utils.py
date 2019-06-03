@@ -18,26 +18,25 @@
 # under the License.
 
 """Utility classes and functions. They help organize and keep statistics of datasets."""
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import absolute_import, print_function
+
+import collections
+import errno
+import os
+import sys
+import tarfile
+import zipfile
+
+import numpy as np
+from mxnet.gluon.data import SimpleDataset
+from mxnet.gluon.utils import _get_repo_url, check_sha1, download
+
+from .. import _constants as C
 
 __all__ = [
     'Counter', 'count_tokens', 'concat_sequence', 'slice_sequence', 'train_valid_split',
     'line_splitter', 'whitespace_splitter', 'Splitter'
 ]
-
-import os
-import collections
-import zipfile
-import tarfile
-import numpy as np
-
-from mxnet.gluon.data import SimpleDataset
-from mxnet.gluon.utils import _get_repo_url, download, check_sha1
-
-from .. import _constants as C
-from ..base import get_home_dir
-
 
 class Counter(collections.Counter):  # pylint: disable=abstract-method
     """Counter class for keeping token frequencies."""
@@ -223,9 +222,9 @@ _vocab_sha1 = {'wikitext-2': 'be36dc5238c2e7d69720881647ab72eb506d0131',
                'WMT2014_tgt': '230ebb817b1d86950d71e2e765f192a4e4f34415',
                'book_corpus_wiki_en_cased': '2d62af22535ed51f35cc8e2abb607723c89c2636',
                'book_corpus_wiki_en_uncased': 'a66073971aa0b1a262453fe51342e57166a8abcf',
-               'wiki_multilingual_cased': '71bb9e248dc75dce9227d3c8c16fde3993588b9e',
-               'wiki_cn_cased': 'a1e06f8e39ae51ab8a92b8458e6a658b8b1f72bf',
-               'wiki_cn': 'a1e06f8e39ae51ab8a92b8458e6a658b8b1f72bf',
+               'wiki_multilingual_cased': '0247cb442074237c38c62021f36b7a4dbd2e55f7',
+               'wiki_cn_cased': 'ddebd8f3867bca5a61023f73326fb125cf12b4f5',
+               'wiki_cn': 'ddebd8f3867bca5a61023f73326fb125cf12b4f5',
                'wiki_multilingual_uncased': '2b2514cc539047b9179e9d98a4e68c36db05c97a',
                'wiki_multilingual': '2b2514cc539047b9179e9d98a4e68c36db05c97a'}
 
@@ -238,7 +237,7 @@ def train_valid_split(dataset, valid_ratio=0.05):
 
     Parameters
     ----------
-    train : list
+    dataset : list
         A list of training samples.
     valid_ratio : float, default 0.05
         Proportion of training samples to use for validation set
@@ -268,16 +267,15 @@ def short_hash(name):
     return _vocab_sha1[name][:8]
 
 
-def _load_pretrained_vocab(name, root=os.path.join(get_home_dir(), 'models'), cls=None):
+def _load_pretrained_vocab(name, root, cls=None):
     """Load the accompanying vocabulary object for pre-trained model.
 
     Parameters
     ----------
     name : str
         Name of the vocabulary, usually the name of the dataset.
-    root : str, default '$MXNET_HOME/models'
-        Location for keeping the model parameters.
-        MXNET_HOME defaults to '~/.mxnet'.
+    root : str
+        Location for keeping the model vocabulary.
     cls : nlp.Vocab or nlp.vocab.BERTVocab, default nlp.Vocab
 
     Returns
@@ -299,7 +297,13 @@ def _load_pretrained_vocab(name, root=os.path.join(get_home_dir(), 'models'), cl
         print('Vocab file is not found. Downloading.')
 
     if not os.path.exists(root):
-        os.makedirs(root)
+        try:
+            os.makedirs(root)
+        except OSError as e:
+            if e.errno == errno.EEXIST and os.path.isdir(root):
+                pass
+            else:
+                raise e
 
     zip_file_path = os.path.join(root, file_name + '.zip')
     repo_url = _get_repo_url()
@@ -327,7 +331,7 @@ def _load_vocab_file(file_path, cls):
         return cls.from_json(f.read())
 
 
-def _extract_archive(file, target_dir):
+def _extract_archive(file, target_dir):  # pylint: disable=redefined-builtin
     """Extract archive file
 
     Parameters
@@ -407,3 +411,35 @@ class Splitter(object):
             List of strings. Obtained by calling s.split(separator).
         """
         return s.split(self._separator)
+
+
+def _convert_to_unicode(text):
+    """Converts `text` to Unicode.
+
+    Parameters
+    ----------
+    text : str or bytes
+        text to be converted to unicode
+
+    Returns
+    -------
+    str
+        unicode string
+    """
+    py_version = sys.version_info[0]
+    if py_version == 3:
+        if isinstance(text, str):
+            return text
+        elif isinstance(text, bytes):
+            return text.decode('utf-8', 'ignore')
+        else:
+            raise ValueError('Unsupported string type: %s' % (type(text)))
+    elif py_version == 2:
+        if isinstance(text, str):
+            return text.decode('utf-8', 'ignore')
+        elif isinstance(text, unicode):  # noqa: F821
+            return text
+        else:
+            raise ValueError('Unsupported string type: %s' % (type(text)))
+    else:
+        raise ValueError('Not running on Python2 or Python 3?')
