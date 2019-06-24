@@ -46,12 +46,14 @@ import numpy as np
 import mxnet as mx
 from mxnet import gluon
 import gluonnlp as nlp
-from gluonnlp.model import get_bert_model
+from gluonnlp.model import get_model
 from gluonnlp.data import BERTTokenizer
 
-from bert import BERTClassifier, BERTRegression
-from dataset import MRPCTask, QQPTask, RTETask, STSBTask, \
-    QNLITask, CoLATask, MNLITask, WNLITask, SSTTask, XNLITask, BERTDatasetTransform
+from model.classification import BERTClassifier, BERTRegression
+from data.classification import MRPCTask, QQPTask, RTETask, STSBTask, SSTTask
+from data.classification import QNLITask, CoLATask, MNLITask, WNLITask, XNLITask
+from data.classification import LCQMCTask, ChnSentiCorpTask
+from data.transform import BERTDatasetTransform
 
 tasks = {
     'MRPC': MRPCTask(),
@@ -63,7 +65,9 @@ tasks = {
     'MNLI': MNLITask(),
     'WNLI': WNLITask(),
     'SST': SSTTask(),
-    'XNLI': XNLITask()
+    'XNLI': XNLITask(),
+    'LCQMC': LCQMCTask(),
+    'ChnSentiCorp': ChnSentiCorpTask()
 }
 
 parser = argparse.ArgumentParser(
@@ -171,7 +175,7 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.INFO)
 logging.captureWarnings(True)
 logging.info(args)
 
@@ -207,8 +211,8 @@ if only_inference and not model_parameters:
 
 get_pretrained = not (pretrained_bert_parameters is not None
                       or model_parameters is not None)
-bert, vocabulary = get_bert_model(
-    model_name=model_name,
+bert, vocabulary = get_model(
+    name=model_name,
     dataset_name=dataset,
     pretrained=get_pretrained,
     ctx=ctx,
@@ -241,7 +245,7 @@ if model_parameters:
     model.load_parameters(model_parameters, ctx=ctx)
 nlp.utils.mkdir(output_dir)
 
-logging.info(model)
+logging.debug(model)
 model.hybridize(static_alloc=True)
 loss_function.hybridize(static_alloc=True)
 
@@ -335,26 +339,33 @@ def test(loader_test, segment):
     logging.info('Now we are doing testing on %s with %s.', segment, ctx)
 
     tic = time.time()
-    value_list = []
-    index_list = []
+    results = []
     for _, seqs in enumerate(loader_test):
         input_ids, valid_length, type_ids = seqs
         out = model(input_ids.as_in_context(ctx),
                     type_ids.as_in_context(ctx),
                     valid_length.astype('float32').as_in_context(ctx))
-        values, indices = mx.nd.topk(out, k=1, ret_typ='both')
-        value_list.extend(values.asnumpy().reshape(-1).tolist())
-        index_list.extend(indices.asnumpy().reshape(-1).tolist())
+        if not task.class_labels:
+            # regression task
+            for result in out.asnumpy().reshape(-1).tolist():
+                results.append('{:.3f}'.format(result))
+        else:
+            # classification task
+            indices = mx.nd.topk(out, k=1, ret_typ='indices', dtype='int32').asnumpy()
+            for index in indices:
+                results.append(task.class_labels[int(index)])
 
     mx.nd.waitall()
     toc = time.time()
     logging.info('Time cost=%.2fs, throughput=%.2f samples/s', toc - tic,
                  dev_batch_size * len(loader_test) / (toc - tic))
     # write result to a file.
-    test_path = os.path.join(args.output_dir, 'result.csv')
+    filename = args.task_name + segment.replace('test', '') + '.csv'
+    test_path = os.path.join(args.output_dir, filename)
     with io.open(test_path, 'w', encoding='utf-8') as f:
-        for v, i in zip(value_list, index_list):
-            f.write(u'%.5f\t%d\n'%(v, i))
+        f.write(u'index\tprediction\n')
+        for i, pred in enumerate(results):
+            f.write(u'%d\t%s\n'%(i, str(pred)))
 
 
 def log_train(batch_id, batch_num, metric, step_loss, log_interval, epoch_id, learning_rate):
