@@ -427,7 +427,7 @@ class HierLocalSGDTrainer(object):
         """
         for i, param in enumerate(self._params):
             if param.grad_req != 'null':
-                hvd.allreduce(param.list_data()[0], average=True,
+                hvd.allreduce_(param.list_data()[0], average=True,
                               name=str(i), priority=-i)
                 # param.list_data()[0] /= hvd.size()
                 for j in range(1, len(param.list_data())):
@@ -446,7 +446,7 @@ class HierLocalSGDTrainer(object):
         """
         for i, param in enumerate(self._params):
             if param.grad_req != 'null':
-                hvd.broadcast(param.list_data()[0], root_rank=0, name = str(i))
+                hvd.broadcast_(param.list_data()[0], root_rank=0, name = str(i))
                 for j in range(1, len(param.list_data())):
                     param.list_data()[0].copyto(param.list_data()[j])
 
@@ -459,7 +459,7 @@ class HierLocalSGDTrainer(object):
                         state_arrays = [updater.states[i][j] for updater in self._updaters]
                         idx = i+len(self._params)*(j+1)
                         if param._stype == 'default':
-                            hvd.allreduce(state_arrays[0], average=True,
+                            hvd.allreduce_(state_arrays[0], average=True,
                                           name=str(idx), priority=i-len(self._params)*2)
                             # state_arrays[0] /= hvd.size()
                             for j in range(1, len(state_arrays)):
@@ -470,7 +470,7 @@ class HierLocalSGDTrainer(object):
                     state_arrays = [updater.states[i] for updater in self._updaters]
                     idx = i+len(self._params)
                     if param._stype == 'default':
-                        hvd.allreduce(state_arrays[0], average=True,
+                        hvd.allreduce_(state_arrays[0], average=True,
                                       name=str(idx), priority=i-len(self._params)*2)
                         # state_arrays[0] /= hvd.size()
                         for j in range(1, len(state_arrays)):
