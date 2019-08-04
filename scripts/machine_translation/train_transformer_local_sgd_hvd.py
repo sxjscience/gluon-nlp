@@ -443,6 +443,7 @@ def train():
         # mx.nd.waitall()
 
         logging.info('[{}] [Epoch {}] time={:.2f}s'.format(rank, epoch_id, time.time()-epoch_start_time))
+        '''
         if epoch_id >= args.start_eval:
             valid_loss, valid_translation_out = evaluate(val_data_loader, ctx[0])
             valid_bleu_score, _, _, _, _ = compute_bleu([val_tgt_sentences], valid_translation_out,
@@ -478,6 +479,7 @@ def train():
         if rank == 0:
             save_path = os.path.join(args.save_dir, 'epoch{:d}.params'.format(epoch_id))
             model.save_parameters(save_path)
+        '''
         # mx.nd.waitall()
         logging.info('[{}] [Epoch {}] finished'.format(rank, epoch_id))
         logging.StreamHandler().flush()
