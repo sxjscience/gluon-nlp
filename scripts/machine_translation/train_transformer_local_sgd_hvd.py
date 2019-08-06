@@ -40,6 +40,7 @@ import random
 import os
 import logging
 import math
+import sys
 import numpy as np
 import mxnet as mx
 from mxnet import gluon
@@ -56,7 +57,7 @@ import dataprocessor
 
 from gluonnlp.optimizer.hier_local_sgd import HierLocalSGDTrainer
 
-os.environ['MXNET_GPU_MEM_POOL_TYPE'] = 'Round'
+#os.environ['MXNET_GPU_MEM_POOL_TYPE'] = 'Round'
 
 parser = argparse.ArgumentParser(description='Neural Machine Translation Example.'
                                              'We train the Transformer Model')
@@ -314,7 +315,7 @@ def train():
 
     train_data_loader, val_data_loader, test_data_loader \
         = dataprocessor.make_dataloader(data_train, data_val, data_test, args,
-                                        use_average_length=True, num_shards=len(ctx))
+                                        use_average_length=False, num_shards=len(ctx), num_workers=0)
 
     if args.bleu == 'tweaked':
         bpe = bool(args.dataset != 'IWSLT2015' and args.dataset != 'TOY')
@@ -354,7 +355,7 @@ def train():
     # sync params
     trainer.broadcast_params()
     # broadcast_params(trainer)
-    # mx.nd.waitall()
+    mx.nd.waitall()
     # logging.info('[{}] broadcast done'.format(rank))
 
 
@@ -365,8 +366,12 @@ def train():
         step_loss = 0
         log_start_time = time.time()
         epoch_start_time = time.time()
+        print('local_rank={}, before training'.format(local_rank))
         for batch_id, seqs \
                 in enumerate(train_data_loader):
+            #print(batch_id, flush=True)
+            #print(seqs.asnumpy().shape, flush=True)
+            logging.info('{}, {}'.format(batch_id, step_num))
             if batch_id % grad_interval == 0:
                 step_num += 1
                 new_lr = args.lr / math.sqrt(args.num_units) \
@@ -435,7 +440,7 @@ def train():
                 # if batch_id > 2000:
                 #     break
         # sync params
-        # mx.nd.waitall()
+        mx.nd.waitall()
         trainer.allreduce_params()
         trainer.allreduce_states()
         # allreduce_params(trainer)

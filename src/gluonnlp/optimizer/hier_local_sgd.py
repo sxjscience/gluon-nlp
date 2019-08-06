@@ -336,12 +336,12 @@ class HierLocalSGDTrainer(object):
         rescale_grad = self._scale / batch_size
         self._check_and_rescale_grad(rescale_grad)
 
-        if not self._kv_initialized:
+        '''if not self._kv_initialized:
             self._init_kvstore()
         if self._params_to_init:
-            self._init_params()
+            self._init_params()'''
 
-        self._allreduce_grads()
+        #self._allreduce_grads()
 
         if self._local_sgd > 1 and self._local_sgd_counter == 0 and self._local_sgd_regularization > 0:
             # regularization for local sgd
@@ -353,7 +353,7 @@ class HierLocalSGDTrainer(object):
                     self._local_sgd_regularization_params.append([])
 
         self._update(ignore_stale_grad)
-
+        '''
         if self._local_sgd > 1 and self._local_sgd_regularization > 0:
             # regularization for local sgd
             # TODO(xcong): use param.name instead of the indices
@@ -366,7 +366,7 @@ class HierLocalSGDTrainer(object):
                         for j, data in enumerate(param.list_data()):
                             data *= mixing_weight
                             data += self._local_sgd_regularization_params[i][j]
-
+        '''
         if self._local_sgd > 1:
             # local sgd
             self._local_sgd_counter += 1
@@ -374,7 +374,7 @@ class HierLocalSGDTrainer(object):
                 self._local_sgd_counter = 0
                 # synchronization
                 self.allreduce_params()
-                self.allreduce_states()
+                # self.allreduce_states()
                 # indicate that the parameters are synchronized in the current iteration
                 return True
             return False
@@ -427,11 +427,15 @@ class HierLocalSGDTrainer(object):
         """
         for i, param in enumerate(self._params):
             if param.grad_req != 'null':
-                hvd.allreduce_(param.list_data()[0], average=True,
-                              name=str(i), priority=-i)
+                # param.list_data()[0].wait_to_read()
+                #hvd.allreduce_(param.list_data()[0], average=True,
+                #              name=str(i), priority=-i)
+                hvd.allreduce_(param.list_data()[0])#, average=True)
+                
+                # param.list_data()[0].wait_to_read()
                 # param.list_data()[0] /= hvd.size()
-                for j in range(1, len(param.list_data())):
-                    param.list_data()[0].copyto(param.list_data()[j])
+                #for j in range(1, len(param.list_data())):
+                #    param.list_data()[0].copyto(param.list_data()[j])
 
     def broadcast_params(self):
         """For each parameter, broadcast the parameters to different processes and contexts.
@@ -459,7 +463,7 @@ class HierLocalSGDTrainer(object):
                         state_arrays = [updater.states[i][j] for updater in self._updaters]
                         idx = i+len(self._params)*(j+1)
                         if param._stype == 'default':
-                            hvd.allreduce_(state_arrays[0], average=True,
+                            hvd.allreduce(state_arrays[0], average=True,
                                           name=str(idx), priority=i-len(self._params)*2)
                             # state_arrays[0] /= hvd.size()
                             for j in range(1, len(state_arrays)):
@@ -470,7 +474,7 @@ class HierLocalSGDTrainer(object):
                     state_arrays = [updater.states[i] for updater in self._updaters]
                     idx = i+len(self._params)
                     if param._stype == 'default':
-                        hvd.allreduce_(state_arrays[0], average=True,
+                        hvd.allreduce(state_arrays[0], average=True,
                                       name=str(idx), priority=i-len(self._params)*2)
                         # state_arrays[0] /= hvd.size()
                         for j in range(1, len(state_arrays)):
