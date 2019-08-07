@@ -342,7 +342,7 @@ class HierLocalSGDTrainer(object):
             self._init_params()'''
 
         #self._allreduce_grads()
-
+        '''
         if self._local_sgd > 1 and self._local_sgd_counter == 0 and self._local_sgd_regularization > 0:
             # regularization for local sgd
             self._local_sgd_regularization_params = []
@@ -351,7 +351,7 @@ class HierLocalSGDTrainer(object):
                     self._local_sgd_regularization_params.append([self._local_sgd_regularization * x.copy() for x in param.list_data()])
                 else:
                     self._local_sgd_regularization_params.append([])
-
+        '''
         self._update(ignore_stale_grad)
         '''
         if self._local_sgd > 1 and self._local_sgd_regularization > 0:

@@ -48,7 +48,7 @@ import gluonnlp as nlp
 
 from gluonnlp.model.translation import NMTModel
 from gluonnlp.model.transformer import get_transformer_encoder_decoder, ParallelTransformer
-from gluonnlp.utils.parallel import Parallel
+#from gluonnlp.utils.parallel import Parallel
 from translation import BeamSearchTranslator
 from gluonnlp.loss import MaskedSoftmaxCELoss, LabelSmoothing
 from utils import logging_config
@@ -336,18 +336,18 @@ def train():
     average_start = (len(train_data_loader) // grad_interval) * (args.epochs - args.average_start)
     average_param_dict = None
     model.collect_params().zero_grad()
-    parallel = Parallel(num_ctxs, parallel_model)
+    #parallel = Parallel(num_ctxs, parallel_model)
 
     # broadcast the initial values
     for batch_id, seqs \
             in enumerate(train_data_loader):
         seqs = [[seq.as_in_context(context) for seq in shard]
                 for context, shard in zip(ctx, seqs)]
-        Ls = []
-        for seq in seqs:
-            parallel.put((seq, args.batch_size))
-        Ls = [parallel.get() for _ in range(len(ctx))]
+        #for seq in seqs:
+        #    parallel.put((seq, args.batch_size))
+        #Ls = [parallel.get() for _ in range(len(ctx))]
         # run a single forward to trigger initialization
+        Ls = [parallel_model.forward_backward((seq, args.batch_size)) for seq in seqs]
         break
     model.collect_params().zero_grad()
     # mx.nd.waitall()
@@ -381,18 +381,20 @@ def train():
                                          for shard in seqs], axis=0)
             seqs = [[seq.as_in_context(context) for seq in shard]
                     for context, shard in zip(ctx, seqs)]
-            Ls = []
-            for seq in seqs:
+            '''for seq in seqs:
                 parallel.put((seq, args.batch_size))
-            Ls = [parallel.get() for _ in range(len(ctx))]
+            Ls = [parallel.get() for _ in range(len(ctx))]'''
+            Ls = [parallel_model.forward_backward((seq, args.batch_size)) for seq in seqs]
             src_wc = src_wc.asscalar()
             tgt_wc = tgt_wc.asscalar()
             loss_denom += tgt_wc - bs
             if batch_id % grad_interval == grad_interval - 1 or \
                     batch_id == len(train_data_loader) - 1:
+                '''
                 if average_param_dict is None:
                     average_param_dict = {k: v.data(ctx[0]).copy() for k, v in
                                           model.collect_params().items()}
+                '''
                 # mx.nd.waitall()
                 # logging.info('[{}] [batch {}] before step'.format(rank, batch_id))
 
@@ -406,10 +408,12 @@ def train():
                 #     allreduce_states(trainer)
                 param_dict = model.collect_params()
                 param_dict.zero_grad()
+                '''
                 if step_num > average_start:
                     alpha = 1. / max(1, step_num - average_start)
                     for name, average_param in average_param_dict.items():
                         average_param[:] += alpha * (param_dict[name].data(ctx[0]) - average_param)
+                '''
             step_loss += sum([L.asscalar() for L in Ls])
             if batch_id % grad_interval == grad_interval - 1 or \
                     batch_id == len(train_data_loader) - 1:
