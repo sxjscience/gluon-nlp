@@ -12,6 +12,20 @@ def test_list():
     assert passthrough == data
 
 
+def test_named_tuple():
+    a = ([1, 2, 3, 4], 0)
+    b = ([5, 7], 1)
+    c = ([1, 2, 3, 4, 5, 6, 7], 0)
+    batchify_fn = batchify.NamedTuple([('data', batchify.Pad()),
+                                       ('label', batchify.Stack())], name='SomeName')
+    sample = batchify_fn([a, b, c])
+    gt_data = batchify.Pad()([a[0], b[0], c[0]])
+    gt_label = batchify.Stack()([a[1], b[1], c[1]])
+    assert_allclose(sample.data.asnumpy(), gt_data.asnumpy())
+    assert_allclose(sample.label.asnumpy(), gt_label.asnumpy())
+    assert type(sample).__name__ == 'SomeName'
+
+
 def test_pad():
     padded = batchify.Pad(pad_val=-1)([mx.nd.array([]), mx.nd.arange(1)]).asnumpy().flatten().tolist()
     assert padded == [-1.0, 0.0]
