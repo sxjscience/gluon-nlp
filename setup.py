@@ -57,15 +57,19 @@ setup(
     extras_require={
         'extras': [
             'spacy',
-            'nltk==3.2.5',
+            'nltk',
+            'sacremoses',
             'scipy',
             'numba>=0.45',
             'jieba',
             'sentencepiece',
             'boto3',
+            'tqdm',
+            'sacremoses',
         ],
         'dev': [
             'pytest',
+            'pytest-env',
             'pylint',
             'pylint_quotes',
             'flake8',

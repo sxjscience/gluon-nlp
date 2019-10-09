@@ -16,11 +16,13 @@
 # under the License.
 """Batchify functions. They can be used in Gluon data loader to help combine individual samples
 into batches for fast processing."""
-__all__ = ['Stack', 'Pad', 'Tuple', 'List', 'NamedTuple']
+__all__ = ['Stack', 'Pad', 'Tuple', 'List', 'NamedTuple', 'Dict']
 
 import warnings
 import math
-from collections import namedtuple
+from typing import Dict as t_Dict, Callable as t_Callable,\
+    NamedTuple as t_NamedTuple, List as t_List, Tuple as t_Tuple, AnyStr,\
+    Union as t_Union
 
 import numpy as np
 import mxnet as mx
@@ -107,12 +109,12 @@ class Stack:
 
     Examples
     --------
-    >>> from gluonnlp.data import batchify
+    >>> import gluonnlp.data.batchify as bf
     >>> # Stack multiple lists
     >>> a = [1, 2, 3, 4]
     >>> b = [4, 5, 6, 8]
     >>> c = [8, 9, 1, 2]
-    >>> gluonnlp.data.batchify.Stack()([a, b, c])
+    >>> bf.Stack()([a, b, c])
     <BLANKLINE>
     [[1 2 3 4]
      [4 5 6 8]
@@ -121,7 +123,7 @@ class Stack:
     >>> # Stack multiple numpy.ndarrays
     >>> a = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
     >>> b = np.array([[5, 6, 7, 8], [1, 2, 3, 4]])
-    >>> gluonnlp.data.batchify.Stack()([a, b])
+    >>> bf.Stack()([a, b])
     <BLANKLINE>
     [[[1 2 3 4]
       [5 6 7 8]]
@@ -132,7 +134,7 @@ class Stack:
     >>> # Stack multiple NDArrays
     >>> a = mx.nd.array([[1, 2, 3, 4], [5, 6, 7, 8]])
     >>> b = mx.nd.array([[5, 6, 7, 8], [1, 2, 3, 4]])
-    >>> gluonnlp.data.batchify.Stack()([a, b])
+    >>> bf.Stack()([a, b])
     <BLANKLINE>
     [[[1. 2. 3. 4.]
       [5. 6. 7. 8.]]
@@ -180,11 +182,12 @@ class Pad:
 
     Examples
     --------
+    >>> import gluonnlp.data.batchify as bf
     >>> # Inputs are multiple lists
     >>> a = [1, 2, 3, 4]
     >>> b = [4, 5, 6]
     >>> c = [8, 2]
-    >>> gluonnlp.data.batchify.Pad()([a, b, c])
+    >>> bf.Pad()([a, b, c])
     <BLANKLINE>
     [[1. 2. 3. 4.]
      [4. 5. 6. 0.]
@@ -194,7 +197,7 @@ class Pad:
     >>> a = [1, 2, 3, 4]
     >>> b = [4, 5, 6]
     >>> c = [8, 2]
-    >>> batch, length = gluonnlp.data.batchify.Pad(ret_length=True)([a, b, c])
+    >>> batch, length = bf.Pad(ret_length=True)([a, b, c])
     >>> batch
     <BLANKLINE>
     [[1. 2. 3. 4.]
@@ -208,7 +211,7 @@ class Pad:
     >>> # Inputs are multiple ndarrays
     >>> a = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
     >>> b = np.array([[5, 8], [1, 2]])
-    >>> gluonnlp.data.batchify.Pad(axis=1, pad_val=-1)([a, b])
+    >>> bf.Pad(axis=1, pad_val=-1)([a, b])
     <BLANKLINE>
     [[[ 1  2  3  4]
       [ 5  6  7  8]]
@@ -299,11 +302,11 @@ class Tuple:
 
     Examples
     --------
+    >>> import gluonnlp.data.batchify as bf
     >>> a = ([1, 2, 3, 4], 0)
     >>> b = ([5, 7], 1)
     >>> c = ([1, 2, 3, 4, 5, 6, 7], 0)
-    >>> f1, f2 = gluonnlp.data.batchify.Tuple(gluonnlp.data.batchify.Pad(),
-    ...                                       gluonnlp.data.batchify.Stack())([a, b])
+    >>> f1, f2 = bf.Tuple(bf.Pad(), bf.Stack())([a, b])
     >>> f1
     <BLANKLINE>
     [[1. 2. 3. 4.]
@@ -356,59 +359,125 @@ class List:
 
     Examples
     --------
+    >>> import gluonnlp.data.batchify as bf
     >>> a = ([1, 2, 3, 4], "I am using MXNet")
     >>> b = ([5, 7, 2, 5], "Gluon rocks!")
     >>> c = ([1, 2, 3, 4], "Batchification!")
-    >>> _, l = gluonnlp.data.batchify.Tuple(gluonnlp.data.batchify.Stack(),
-    ...                                     gluonnlp.data.batchify.List())([a, b, c])
+    >>> _, l = bf.Tuple(bf.Stack(), bf.List())([a, b, c])
     >>> l
     ['I am using MXNet', 'Gluon rocks!', 'Batchification!']
     """
-    def __call__(self, data):
+    def __call__(self, data: t_List) -> t_List:
         """
         Parameters
         ----------
-        data : list
+        data
             The list of samples
 
         Returns
         -------
-        ret : list
+        ret
             The input list
         """
         return list(data)
 
 
-class NamedTuple:
-    """Wrap multiple batchify functions together and assign a name to each batchify function.
-     The generated batch samples are stored as namedtuples.
+class Dict:
+    """Wrap multiple batchify functions together and apply it to merge inputs from a dict.
 
-    Each data sample should be a list or tuple containing multiple attributes. The `i`th batchify
-    function stored in `NamedTuple` will be applied on the `i`th attribute. For example, each
-    data sample is (nd_data, label). You can wrap two batchify functions using
-    `NamedTuple([('data', DataBatchify), ('label', LabelBatchify)], name='Sample')` to
-    batchify nd_data and label correspondingly. The result will be stored as a namedtuple and you
-    can access the data and label via `sample.data` and `sample.label`, correspondingly.
+    The generated batch samples are stored as a dict with the same keywords.
+
+    Each data sample should be a dict and the fn corresponds to `key` will be applied on the
+    input with the keyword `key`.
+    For example, each data sample is {'data': nd_data, 'label': nd_label}.
+    You can merge the data and labels using
+    `Dict({'data': DataBatchify, 'label': LabelBatchify})` to batchify the nd_data and nd_label.
 
     Parameters
     ----------
-    fn_info_l : list or tuple
-        The batchify functions to merge.
-        It will be a list or tuple that stores a pair of (name_of_function, fn)
-    name : str, optional
-        The name of the stored namedtuple. Default is Sample.
+    fn_dict
+        A dictionary that contains the key-->batchify function mapping.
 
     Examples
     --------
-    >>> a = ([1, 2, 3, 4], 0)
-    >>> b = ([5, 7], 1)
-    >>> c = ([1, 2, 3, 4, 5, 6, 7], 0)
-    >>> batchify_fn = gluonnlp.data.batchify.NamedTuple([('data', gluonnlp.data.batchify.Pad()),
-    ...                                                  ('label', gluonnlp.data.batchify.Stack())])
+    >>> from gluonnlp.data.batchify import Dict, Pad, Stack
+    >>> a = {'data': [1, 2, 3, 4], 'label': 0}
+    >>> b = {'data': [5, 7], 'label': 1}
+    >>> c = {'data': [1, 2, 3, 4, 5, 6, 7], 'label': 0}
+    >>> batchify_fn = Dict({'data': Pad(), 'label': Stack()})
+    >>> sample = batchify_fn([a, b, c])
+    >>> sample['data']
+    <BLANKLINE>
+    [[1. 2. 3. 4. 0. 0. 0.]
+     [5. 7. 0. 0. 0. 0. 0.]
+     [1. 2. 3. 4. 5. 6. 7.]]
+    <NDArray 3x7 @cpu_shared(0)>
+    >>> sample['label']
+    <BLANKLINE>
+    [0 1 0]
+    <NDArray 3 @cpu_shared(0)>
+    """
+    def __init__(self, fn_dict: t_Dict[AnyStr, t_Callable]):
+        self._fn_dict = fn_dict
+        if not isinstance(fn_dict, dict):
+            raise ValueError('Input must be a dictionary! type of input = {}'
+                             .format(type(fn_dict)))
+        for fn in fn_dict.values():
+            if not hasattr(fn, '__call__'):
+                raise ValueError('Elements of the dictionary must be callable!')
+        self._fn_dict = fn_dict
+
+    def __call__(self, data: t_List[t_Dict]) -> t_Dict:
+        """
+
+        Parameters
+        ----------
+        data
+            The samples to batchify. Each sample should be a dictionary
+
+        Returns
+        -------
+        ret
+            The resulting dictionary that stores the merged samples.
+        """
+        ret = dict()
+        for k, ele_fn in self._fn_dict.items():
+            ret[k] = ele_fn([ele[k] for ele in data])
+        return ret
+
+
+class NamedTuple:
+    """Wrap multiple batchify functions together and apply it to merge inputs from a namedtuple.
+
+    The generated batch samples are stored as a namedtuple with the same structure.
+
+    Each data sample should be a namedtuple. The `i`th batchify
+    function stored in `NamedTuple` will be applied on the `i`th attribute of the namedtuple data.
+    For example, each data sample is Sample(data=nd_data, label=nd_label).
+    You can wrap two batchify functions using
+    `NamedTuple(Sample, {'data': DataBatchify, 'label': LabelBatchify})` to
+    batchify nd_data and nd_label correspondingly. The result will be stored as a Sample object
+    and you can access the data and label via `sample.data` and `sample.label`, correspondingly.
+
+    Parameters
+    ----------
+    container
+        The object that constructs the namedtuple.
+    fn_info
+        The information of the inner batchify functions.
+
+    Examples
+    --------
+    >>> from gluonnlp.data.batchify import NamedTuple, Pad, Stack
+    >>> from collections import namedtuple
+    >>> SampleData = namedtuple('SampleData', ['data', 'label'])
+    >>> a = SampleData([1, 2, 3, 4], 0)
+    >>> b = SampleData([5, 7], 1)
+    >>> c = SampleData([1, 2, 3, 4, 5, 6, 7], 0)
+    >>> batchify_fn = NamedTuple(SampleData, {'data': Pad(), 'label': Stack()})
     >>> sample = batchify_fn([a, b, c])
     >>> sample
-    <BLANKLINE>
-    Sample(data=
+    SampleData(data=
     [[1. 2. 3. 4. 0. 0. 0.]
      [5. 7. 0. 0. 0. 0. 0.]
      [1. 2. 3. 4. 5. 6. 7.]]
@@ -421,13 +490,10 @@ class NamedTuple:
      [5. 7. 0. 0. 0. 0. 0.]
      [1. 2. 3. 4. 5. 6. 7.]]
     <NDArray 3x7 @cpu_shared(0)>
-    >>> # Let's consider to use another name
-    >>> batchify_fn = gluonnlp.data.batchify.NamedTuple([('data', gluonnlp.data.batchify.Pad()),
-    ...                                                  ('label', gluonnlp.data.batchify.Stack())],
-    ...                                                 name='MySample')
+    >>> # Let's consider to use a list
+    >>> batchify_fn = NamedTuple(SampleData, [Pad(), Stack()])
     >>> batchify_fn([a, b, c])
-    <BLANKLINE>
-    MySample(data=
+    SampleData(data=
     [[1. 2. 3. 4. 0. 0. 0.]
      [5. 7. 0. 0. 0. 0. 0.]
      [1. 2. 3. 4. 5. 6. 7.]]
@@ -435,37 +501,47 @@ class NamedTuple:
     [0 1 0]
     <NDArray 3 @cpu_shared(0)>)
     """
-    def __init__(self, fn_info_l, name='Sample'):
-        # Sanity check
-        value_error = ValueError('Unsupported Input Format!'
-                                 ' Expected a list/tuple of (name, fn) pairs,'
-                                 ' Received: {}.'.format(fn_info_l))
-        if not isinstance(fn_info_l, (list, tuple)):
-            raise value_error
-        for ele in fn_info_l:
-            if len(ele) != 2:
-                raise value_error
-            if not hasattr(ele[1], '__call__'):
-                raise value_error
-        self._container = namedtuple(name, [ele[0] for ele in fn_info_l])
-        self._fn_l = [ele[1] for ele in fn_info_l]
+    def __init__(self,
+                 container: t_NamedTuple,
+                 fn_info: t_Union[t_List[t_Callable],
+                                  t_Tuple[t_Callable],
+                                  t_Dict[AnyStr, t_Callable]]):
+        self._container = container
+        if isinstance(fn_info, (list, tuple)):
+            if len(container._fields) != len(fn_info):
+                raise ValueError('Attributes mismatch! Required fields={}, fn_info={}'
+                                 .format(container._fields, fn_info))
+        elif isinstance(fn_info, dict):
+            for name in container._fields:
+                if name not in fn_info:
+                    raise ValueError('Attribute {} has not been assigned a callable. '
+                                     'Required fields={}, Found fields={}'
+                                     .format(name, container._fields, fn_info.keys()))
+            if len(container._fields) != len(fn_info):
+                raise ValueError('Attributes mimatch! Required fields={}, Found fields={}'
+                                 .format(container._fields, fn_info.keys()))
+            fn_info = [fn_info[name] for name in container._fields]
+        for fn in fn_info:
+            if not hasattr(fn, '__call__'):
+                raise ValueError('All batchify functions must be callable.')
+        self._fn_l = fn_info
 
-    def __call__(self, data):
+    def __call__(self, data: t_List[t_NamedTuple]) -> t_NamedTuple:
         """Batchify the input data.
 
         Parameters
         ----------
-        data : list
-            The samples to batchfy. Each sample should contain N attributes.
+        data
+            The samples to batchfy. Each sample should be a namedtuple.
 
         Returns
         -------
-        ret : namedtuple
+        ret
             A namedtuple of length N. Contains the batchified result of each attribute in the input.
         """
-        assert len(data[0]) == len(self._fn_l),\
-            'The number of attributes in each data sample should contain' \
-            ' {} elements'.format(len(self._fn_l))
+        if not isinstance(data[0], self._container):
+            raise ValueError('The samples should have the same type as the stored namedtuple.'
+                             ' data[0]={}, container={}'.format(data[0], self._container))
         ret = []
         for i, ele_fn in enumerate(self._fn_l):
             ret.append(ele_fn([ele[i] for ele in data]))
