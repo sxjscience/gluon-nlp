@@ -240,7 +240,7 @@ def evaluate(data_loader, context=ctx[0]):
                                              sequence_length=tgt_valid_length - 1,
                                              use_sequence_length=True,
                                              axis=1)
-        loss = nll_loss.sum()
+        loss = masked_nll_loss.sum().asscalar()
         # loss = test_loss_function(out, tgt_seq[:, 1:], tgt_valid_length - 1).mean().asscalar()
         all_inst_ids.extend(inst_ids.asnumpy().astype(np.int32).tolist())
         # avg_loss += loss * (tgt_seq.shape[1] - 1)
