@@ -246,7 +246,7 @@ def evaluate(data_loader, context=ctx[0]):
         # avg_loss += loss * (tgt_seq.shape[1] - 1)
         # avg_loss_denom += (tgt_seq.shape[1] - 1)
         avg_loss += loss
-        avg_loss_denom += (tgt_valid_length - 1).sum()
+        avg_loss_denom += (tgt_valid_length - 1).sum().asscalar()
         # Translate
         samples, _, sample_valid_length = \
             translator.translate(src_seq=src_seq, src_valid_length=src_valid_length)
