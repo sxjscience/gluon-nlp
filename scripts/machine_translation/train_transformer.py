@@ -234,10 +234,19 @@ def evaluate(data_loader, context=ctx[0]):
         tgt_valid_length = tgt_valid_length.as_in_context(context)
         # Calculating Loss
         out, _ = model(src_seq, tgt_seq[:, :-1], src_valid_length, tgt_valid_length - 1)
-        loss = test_loss_function(out, tgt_seq[:, 1:], tgt_valid_length - 1).mean().asscalar()
+        tgt_pred_logits = mx.nd.log_softmax(out, axis=-1)
+        nll_loss = - mx.nd.pick(tgt_pred_logits, tgt_seq[:, 1:], axis=-1)
+        masked_nll_loss = mx.nd.SequenceMask(nll_loss,
+                                             sequence_length=tgt_valid_length - 1,
+                                             use_sequence_length=True,
+                                             axis=1)
+        loss = nll_loss.sum()
+        # loss = test_loss_function(out, tgt_seq[:, 1:], tgt_valid_length - 1).mean().asscalar()
         all_inst_ids.extend(inst_ids.asnumpy().astype(np.int32).tolist())
-        avg_loss += loss * (tgt_seq.shape[1] - 1)
-        avg_loss_denom += (tgt_seq.shape[1] - 1)
+        # avg_loss += loss * (tgt_seq.shape[1] - 1)
+        # avg_loss_denom += (tgt_seq.shape[1] - 1)
+        avg_loss += loss
+        avg_loss_denom += (tgt_valid_length - 1).sum()
         # Translate
         samples, _, sample_valid_length = \
             translator.translate(src_seq=src_seq, src_valid_length=src_valid_length)
