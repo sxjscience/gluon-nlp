@@ -301,10 +301,11 @@ class FixedBucketSampler(Sampler):
     """
     def __init__(self, lengths, batch_size, num_buckets=10, bucket_keys=None,
                  ratio=0, shuffle=False, use_average_length=False, num_shards=0,
-                 bucket_scheme=ConstWidthBucket()):
+                 bucket_scheme=ConstWidthBucket(), seed=None):
         assert len(lengths) > 0, 'FixedBucketSampler does not support empty lengths.'
         assert batch_size > 0, 'Batch size must be larger than 0.'
         assert ratio >= 0, 'batch size scaling ratio cannot be negative.'
+        self._rng = np.random.RandomState(seed)
         self._batch_size = batch_size
         self._ratio = ratio
         self._lengths = np.array(lengths, dtype=np.int32)
@@ -386,9 +387,9 @@ class FixedBucketSampler(Sampler):
 
     def __iter__(self):
         if self._shuffle:
-            np.random.shuffle(self._batch_infos)
+            self._rng.shuffle(self._batch_infos)
             for bucket_id in range(len(self._bucket_keys)):
-                np.random.shuffle(self._bucket_sample_ids[bucket_id])
+                self._rng.shuffle(self._bucket_sample_ids[bucket_id])
 
         if self._num_shards > 0:
             for batch_idx in range(0, len(self._batch_infos), self._num_shards):
