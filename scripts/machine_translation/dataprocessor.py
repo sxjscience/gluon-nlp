@@ -235,7 +235,8 @@ def get_dataloader(data_set, args, dataset_type,
                                                 shuffle=(dataset_type == 'train'),
                                                 use_average_length=use_average_length,
                                                 num_shards=num_shards,
-                                                bucket_scheme=bucket_scheme)
+                                                bucket_scheme=bucket_scheme,
+                                                seed=100)
 
     if dataset_type == 'train':
         logging.info('Train Batch Sampler:\n%s', batch_sampler.stats())
