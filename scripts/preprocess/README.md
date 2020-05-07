@@ -2,10 +2,11 @@
 
 ## Clean and Tokenize a Parallel Corpus
 
+To clean and tokenize a parallel corpus, use
 
-## Corpus Filtering
-
-
+```
+nlp_preprocess clean_tok_para_corpus --help
+```
 
 ## Learn/Apply Subwords
 
