@@ -43,7 +43,7 @@ setup(
     # Metadata
     name='gluonnlp',
     version=VERSION,
-    python_requires='>=3.5',
+    python_requires='>=3.6',
     author='GluonNLP Toolkit Contributors',
     author_email='mxnet-gluon@amazon.com',
     description='MXNet GluonNLP Toolkit (DeepNumpy Version)',
