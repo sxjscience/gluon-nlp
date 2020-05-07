@@ -1,8 +1,8 @@
 import argparse
 import os
 import tarfile
-from numpy_nlp.base import get_data_home_dir
-from numpy_nlp.utils.misc import download
+from gluonnlp.base import get_data_home_dir
+from gluonnlp.utils.misc import download
 import zipfile
 
 _CITATIONS = """
