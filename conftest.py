@@ -29,7 +29,7 @@ import random
 
 import numpy as np
 import mxnet as mx
-import numpy_nlp
+import gluonnlp
 import pytest
 
 
