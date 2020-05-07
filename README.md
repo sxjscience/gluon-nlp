@@ -36,7 +36,7 @@ To install, use
 ```bash
 pip install -U -e .
 
-# Also, you may install all the extra requirements via
+# Also, it's highly recommended to install all the extra requirements via
 pip install -U -e .[extras]
 ```
 
@@ -67,3 +67,5 @@ python -m gluonnlp.cli.data help
 python -m gluonnlp.cli.preprocess help
 
 ```
+# Run Unittests
+You may go to [tests](tests) to see all the unittests.
