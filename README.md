@@ -8,7 +8,7 @@ This is a work-in-progress.
 # Features
 
 - Data Pipeline for NLP
-- AutoML support (TODO)
+- AutoML support
 - Pretrained Model Zoo
 - Fast Deployment
     - [TVM](https://tvm.apache.org/) (TODO)
@@ -25,6 +25,9 @@ pip install -U --pre mxnet-cu101 -f https://dist.mxnet.io/python
 
 # Install the cpu-only version
 pip install -U --pre mxnet -f https://dist.mxnet.io/python
+
+# In case you do not have the permission, try the following
+pip install -U --pre mxnet-cu101 -f https://dist.mxnet.io/python --user
 ```
 
 

@@ -38,12 +38,11 @@ python prepare_wikipedia.py --mode format -i [path-to-wiki.xml.bz2] -o ./
 You can download the OpenWebText from [link](https://skylion007.github.io/OpenWebTextCorpus/).
 After downloading and extracting the OpenWebText, you can use the following command to preprocess 
 the data for pretraining purpose.
-
-```bash
-python prepare_openwebtext.py --input 
-``` 
+(TBA)
 
 # CC-News
 
+(TBA)
 
 # C4
+(TBA)
