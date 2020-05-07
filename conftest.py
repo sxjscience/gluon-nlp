@@ -201,7 +201,7 @@ def hybridize(request):
 @pytest.fixture(autouse=True)
 def doctest(doctest_namespace):
     doctest_namespace['np'] = np
-    doctest_namespace['gluonnlp'] = numpy_nlp
+    doctest_namespace['gluonnlp'] = gluonnlp
     doctest_namespace['mx'] = mx
     doctest_namespace['gluon'] = mx.gluon
     import doctest
