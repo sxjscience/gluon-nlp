@@ -51,3 +51,37 @@ def get_trimmed_lengths(lengths: List[int],
         return trimmed_lengths
     else:
         return np.minimum(lengths, max_length)
+
+
+def match_token_with_char_spans(token_offsets: np.ndarray,
+                                spans: np.ndarray):
+    """Match the token offsets with the character-level offsets.
+
+    1: Set
+
+        spans[0] = max(spans[0], token_offsets[0])
+        spans[1] = min(spans[1], token_offsets[-1][1])
+
+    2: We try to select the minimal token offsets that cover the entity, i.e.
+
+        token_offsets[start][0] <= spans[0] < token_offsets[start][1]
+        token_offsets[end][0] < spans[1] <= token_offsets[end][1]
+
+    3: If it is not possible, we will try to select the token offsets
+
+    Parameters
+    ----------
+    token_offsets
+        The offsets of the input tokens. Must be sorted.
+        That is, it will satisfy
+            1. token_offsets[i][0] <= token_offsets[i][1]
+            2. token_offsets[i][0] <= token_offsets[i + 1][0]
+    spans
+        The character-level offsets (begin/end) of the selected spans
+
+    Returns
+    -------
+    span_token_start_end
+        The token-level starts and ends.
+    """
+    pass
