@@ -55,19 +55,24 @@ def get_trimmed_lengths(lengths: List[int],
 
 def match_token_with_char_spans(token_offsets: np.ndarray,
                                 spans: np.ndarray):
-    """Match the token offsets with the character-level offsets.
+    """Match the span offsets with the character-level offsets.
 
     1: Set
 
         spans[0] = max(spans[0], token_offsets[0])
         spans[1] = min(spans[1], token_offsets[-1][1])
 
-    2: We try to select the minimal token offsets that cover the entity, i.e.
+    2: We try to select the smallest number of tokens that cover the entity, i.e.
 
         token_offsets[start][0] <= spans[0] < token_offsets[start][1]
         token_offsets[end][0] < spans[1] <= token_offsets[end][1]
 
-    3: If it is not possible, we will try to select the token offsets
+    3: If it is not possible, we will use the fallback strategy.
+
+        We choose the smallest range of tokens that has the largest overlap with the
+        selected span:
+
+
 
     Parameters
     ----------
@@ -76,12 +81,14 @@ def match_token_with_char_spans(token_offsets: np.ndarray,
         That is, it will satisfy
             1. token_offsets[i][0] <= token_offsets[i][1]
             2. token_offsets[i][0] <= token_offsets[i + 1][0]
+        Shape (#num_tokens, 2)
     spans
-        The character-level offsets (begin/end) of the selected spans
+        The character-level offsets (begin/end) of the selected spans.
+        Shape (#spans, 2)
 
     Returns
     -------
     span_token_start_end
         The token-level starts and ends.
     """
-    pass
+
