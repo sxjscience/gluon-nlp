@@ -20,6 +20,7 @@ from mxnet.gluon.utils import shape_is_known, replace_file
 from collections import OrderedDict
 import glob as _glob
 
+
 def glob(url, separator=','):
     """Return a list of paths matching a pathname pattern.
 

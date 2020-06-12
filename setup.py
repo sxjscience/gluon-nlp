@@ -31,9 +31,26 @@ requirements = [
     'sacremoses>=0.0.38',
     'yacs>=0.1.6',
     'sacrebleu',
-    'flake8',
-    'regex'
+    'regex',
+    'tokenizers>=0.7.0',
+    'sentencepiece'
 ]
+
+test_requirements = [
+    'flake8',
+    'pytest',
+    'pytest-env',
+    'pylint',
+    'pylint_quotes',
+    'recommonmark',
+    'sphinx-gallery',
+    'sphinx_rtd_theme',
+    'mxtheme',
+    'sphinx-autodoc-typehints',
+    'nbsphinx',
+    'flaky'
+]
+
 
 setup(
     # Metadata
@@ -55,13 +72,11 @@ setup(
     zip_safe=True,
     include_package_data=True,
     install_requires=requirements,
+    tests_require=test_requirements,
     extras_require={
         'extras': [
             'boto3',
             'tqdm',
-            'protobuf',
-            'tokenizers>=0.7.0',
-            'sentencepiece',
             'jieba',
             'subword_nmt',
             'youtokentome>=1.0.6',
@@ -73,20 +88,7 @@ setup(
             'scipy',
             'tqdm'
         ],
-        'dev': [
-            'pytest',
-            'pytest-env',
-            'pylint',
-            'pylint_quotes',
-            'flake8',
-            'recommonmark',
-            'sphinx-gallery',
-            'sphinx_rtd_theme',
-            'mxtheme',
-            'sphinx-autodoc-typehints',
-            'nbsphinx',
-            'flaky',
-        ],
+        'dev': test_requirements,
     },
 
     entry_points={

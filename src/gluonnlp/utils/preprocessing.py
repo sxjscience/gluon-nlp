@@ -54,25 +54,37 @@ def get_trimmed_lengths(lengths: List[int],
 
 
 def match_token_with_char_spans(token_offsets: np.ndarray,
-                                spans: np.ndarray):
+                                spans: np.ndarray) -> np.ndarray:
     """Match the span offsets with the character-level offsets.
 
-    1: Set
+    For each span, we perform the following:
 
-        spans[0] = max(spans[0], token_offsets[0])
-        spans[1] = min(spans[1], token_offsets[-1][1])
+    1: Cutoff the boundary
+
+        span[0] = max(span[0], token_offsets[0, 0])
+        span[1] = min(span[1], token_offsets[-1, 1])
 
     2: We try to select the smallest number of tokens that cover the entity, i.e.
 
-        token_offsets[start][0] <= spans[0] < token_offsets[start][1]
-        token_offsets[end][0] < spans[1] <= token_offsets[end][1]
+        For start, we have:
+            1. Try to search for the first start location that satisfies:
 
-    3: If it is not possible, we will use the fallback strategy.
+                token_offsets[start, 0] <= span[0] < token_offsets[start, 1]
 
-        We choose the smallest range of tokens that has the largest overlap with the
-        selected span:
+            2. If it's not possible, we search for the largest start that is less than or
+            equal to span[0].
 
+                start = \argmax_{i} {token_offsets[i, 0] | token_offsets[i, 0] <= span[0]}
 
+        For end, we have:
+
+            1. Try to search for the last end location that satisfies:
+
+                token_offsets[end, 0] < spans[1] <= token_offsets[end, 1]
+
+            2. If it's not possible, we search for the location as follows:
+
+                end = \argmin_{i} {token_offsets[i, 1] | token_offsets[i, 1] >= span[1]}
 
     Parameters
     ----------
