@@ -10,13 +10,14 @@ class LabelSmoothCrossEntropyLoss(HybridBlock):
 
         lp = \log \softmax({pred})
 
-        L = - [(1 - \alpha) \sum_{i=1}^N (lp_{i, {label}_i}) + \alpha \frac{1}{N} \sum_{j=1}^N (lp_{i, j})]
+        y = (1 - \alpha) one_hot({label}) + \frac{\alpha}{N}
+        L = - \sum_{i=1}^N y_i lp_i
 
     To reduce complexity, we can implement it as
 
     .. math::
 
-        L = -\sum_i (\frac{N \alpha - 1}{N-1} lp_{i, {label}_i} + \frac{1 - \alpha}{N - 1} \sum_j lp_{i, j})
+        L_i = - [(1 - \alpha) lp_{i, {label}_i}) + \alpha \frac{1}{N} \sum_{j=1}^N (lp_{i, j})]
 
     Parameters
     ----------
