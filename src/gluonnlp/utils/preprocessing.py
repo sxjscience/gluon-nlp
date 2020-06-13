@@ -102,8 +102,8 @@ def match_tokens_with_char_spans(token_offsets: np.ndarray,
     span_char_ends = spans[: 1]
 
     # Truncate the span
-    span_char_starts = max(offsets_starts[0], span_char_starts)
-    span_char_ends = min(offsets_ends[-1], span_char_ends)
+    span_char_starts = np.maximum(offsets_starts[0], span_char_starts)
+    span_char_ends = np.minimum(offsets_ends[-1], span_char_ends)
 
     # Search for valid start + end
     span_token_starts = np.searchsorted(offsets_starts, span_char_starts, side='right') - 1
