@@ -406,8 +406,8 @@ def convert_squad_example_to_feature(example: SquadExample,
             token_start_ends = match_tokens_with_char_spans(np_offsets,
                                                             np.array([[start_position,
                                                                        end_position]]))
-            lower_idx = token_start_ends[0][0]
-            upper_idx = token_start_ends[0][1]
+            lower_idx = int(token_start_ends[0][0])
+            upper_idx = int(token_start_ends[0][1])
             if not find_all_candidates:
                 first_lower_idx = lower_idx
                 first_upper_idx = upper_idx
