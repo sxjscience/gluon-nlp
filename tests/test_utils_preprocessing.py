@@ -21,3 +21,19 @@ def test_get_trimmed_lengths():
 def test_match_tokens_with_char_spans():
     token_offsets = np.array([(0, 1), (1, 2), (3, 4), (5, 6)])
     spans = np.array([(0, 3), (4, 6)])
+    out = match_tokens_with_char_spans(token_offsets, spans)
+    assert_allclose(out, np.array([[0, 2],
+                                   [2, 3]]))
+
+    token_offsets = np.array([(5, 10), (10, 20), (20, 25), (26, 30)])
+    spans = np.array([(0, 3), (4, 6), (10, 30),
+                      (22, 23), (15, 25),
+                      (10, 35), (36, 38)])
+    out = match_tokens_with_char_spans(token_offsets, spans)
+    assert_allclose(out, np.array([[0, 0],
+                                   [0, 0],
+                                   [1, 3],
+                                   [2, 2],
+                                   [1, 2],
+                                   [1, 3],
+                                   [3, 3]]))
