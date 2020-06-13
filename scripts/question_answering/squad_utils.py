@@ -389,7 +389,7 @@ def convert_squad_example_to_feature(example: SquadExample,
     gt_span_start_pos, gt_span_end_pos = None, None
     token_answer_mismatch = False
     unreliable_span = False
-    offsets = np.array(offsets)
+    np_offsets = np.array(offsets)
     if is_training and not example.is_impossible:
         assert example.start_position >= 0 and example.end_position >= 0
         # We convert the character-level offsets to token-level offsets
@@ -403,7 +403,7 @@ def convert_squad_example_to_feature(example: SquadExample,
         while len(candidates) > 0:
             start_position, end_position = candidates.pop()
             # Match the token offsets
-            token_start_ends = match_tokens_with_char_spans(offsets,
+            token_start_ends = match_tokens_with_char_spans(np_offsets,
                                                             np.array([[start_position,
                                                                        end_position]]))
             lower_idx = token_start_ends[0][0]
@@ -445,7 +445,7 @@ def convert_squad_example_to_feature(example: SquadExample,
                            query_token_ids=query_token_ids,
                            context_text=context_text,
                            context_token_ids=context_token_ids,
-                           context_token_offsets=offsets.tolist(),
+                           context_token_offsets=offsets,
                            is_impossible=example.is_impossible,
                            token_answer_mismatch=token_answer_mismatch,
                            unreliable_span=unreliable_span,
