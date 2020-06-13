@@ -401,7 +401,7 @@ def download(url: str,
     fname
         The file path of the downloaded file.
     """
-    is_s3 = path.startswith(S3_PREFIX)
+    is_s3 = url.startswith(S3_PREFIX)
     if is_s3:
         boto3 = try_import_boto3()
         s3 = boto3.resource('s3')
