@@ -99,7 +99,7 @@ def match_tokens_with_char_spans(token_offsets: np.ndarray,
     offsets_starts = token_offsets[:, 0]
     offsets_ends = token_offsets[:, 1]
     span_char_starts = spans[:, 0]
-    span_char_ends = spans[: 1]
+    span_char_ends = spans[:, 1]
 
     # Truncate the span
     span_char_starts = np.maximum(offsets_starts[0], span_char_starts)
