@@ -53,8 +53,8 @@ def get_trimmed_lengths(lengths: List[int],
         return np.minimum(lengths, max_length)
 
 
-def match_token_with_char_spans(token_offsets: np.ndarray,
-                                spans: np.ndarray) -> np.ndarray:
+def match_tokens_with_char_spans(token_offsets: np.ndarray,
+                                 spans: np.ndarray) -> np.ndarray:
     """Match the span offsets with the character-level offsets.
 
     For each span, we perform the following:
@@ -64,27 +64,18 @@ def match_token_with_char_spans(token_offsets: np.ndarray,
         span[0] = max(span[0], token_offsets[0, 0])
         span[1] = min(span[1], token_offsets[-1, 1])
 
-    2: We try to select the smallest number of tokens that cover the entity, i.e.
+    2: Find start + end
 
-        For start, we have:
-            1. Try to search for the first start location that satisfies:
+    We try to select the smallest number of tokens that cover the entity, i.e.,
+    we will find start + end, in which tokens[start:end + 1] covers the span.
 
-                token_offsets[start, 0] <= span[0] < token_offsets[start, 1]
+    We will use the following algorithm:
 
-            2. If it's not possible, we search for the largest start that is less than or
-            equal to span[0].
+        For "start", we search for
+            token_offsets[start, 0] <= span[0] < token_offsets[start + 1, 0]
 
-                start = \argmax_{i} {token_offsets[i, 0] | token_offsets[i, 0] <= span[0]}
-
-        For end, we have:
-
-            1. Try to search for the last end location that satisfies:
-
-                token_offsets[end, 0] < spans[1] <= token_offsets[end, 1]
-
-            2. If it's not possible, we search for the location as follows:
-
-                end = \argmin_{i} {token_offsets[i, 1] | token_offsets[i, 1] >= span[1]}
+        For "end", we search for:
+            token_offsets[end - 1, 1] < spans[1] <= token_offsets[end, 1]
 
     Parameters
     ----------
@@ -93,6 +84,7 @@ def match_token_with_char_spans(token_offsets: np.ndarray,
         That is, it will satisfy
             1. token_offsets[i][0] <= token_offsets[i][1]
             2. token_offsets[i][0] <= token_offsets[i + 1][0]
+            3. token_offsets[i][1] <= token_offsets[i + 1][1]
         Shape (#num_tokens, 2)
     spans
         The character-level offsets (begin/end) of the selected spans.
@@ -100,7 +92,21 @@ def match_token_with_char_spans(token_offsets: np.ndarray,
 
     Returns
     -------
-    span_token_start_end
-        The token-level starts and ends.
+    token_start_ends
+        The token-level starts and ends. The end will also be used.
+        Shape (#spans, 2)
     """
+    offsets_starts = token_offsets[:, 0]
+    offsets_ends = token_offsets[:, 1]
+    span_char_starts = spans[:, 0]
+    span_char_ends = spans[: 1]
 
+    # Truncate the span
+    span_char_starts = max(offsets_starts[0], span_char_starts)
+    span_char_ends = min(offsets_ends[-1], span_char_ends)
+
+    # Search for valid start + end
+    span_token_starts = np.searchsorted(offsets_starts, span_char_starts, side='right') - 1
+    span_token_ends = np.searchsorted(offsets_ends, span_char_ends, side='left')
+    return np.concatenate((np.expand_dims(span_token_starts, axis=-1),
+                           np.expand_dims(span_token_ends, axis=-1)), axis=-1)
