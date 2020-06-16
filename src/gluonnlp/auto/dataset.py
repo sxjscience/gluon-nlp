@@ -172,7 +172,7 @@ def is_categorical_column(data: pd.Series,
 
     If the number of unique elements in the column is smaller than
 
-        min(#Total Sample * 0.1, 1000),
+        min(#Total Sample * ratio, threshold),
 
     it will be treated as a categorical column
 
@@ -191,11 +191,12 @@ def is_categorical_column(data: pd.Series,
         Whether the column is a categorical column
     """
     threshold = min(int(len(data) * ratio), threshold)
-    unique_num = len(data.unique())
-    if unique_num <= threshold:
-        return True
-    else:
-        return False
+    sample_set = set()
+    for sample in data:
+        sample_set.add(sample)
+        if len(sample_set) > threshold:
+            return False
+    return True
 
 
 def parse_columns(df, column_names: Optional[List[str]] = None,
