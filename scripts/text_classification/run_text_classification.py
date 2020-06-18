@@ -224,6 +224,10 @@ class TextClassificationPretrainTransform:
                 - has_label = True
                     data: Shape (num_entity, 3)
                         Each item will be (start, end, label_id)
+                    no_entity: bool
+                        Whether there is no valid entity for this sample.
+                    num_entity: int
+                        The number of entities
                 - has_label = False
                     data: Shape (num_entity, 2)
                         Each item will be (start, end)
@@ -300,8 +304,11 @@ class TextClassificationPretrainTransform:
             if isinstance(entities, tuple):
                 entities = [entities]
             entities = np.array(entities)
+            # Get the offsets output by the tokenizer
             token_offsets = text_token_offsets[col_name]
+            entity_token_offsets =
             if self.merge_text:
+
 
 
         for col_info, ele in zip(self._column_info, sample):
