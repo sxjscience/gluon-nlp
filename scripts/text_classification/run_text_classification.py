@@ -306,7 +306,7 @@ class TextClassificationPretrainTransform:
             entities = np.array(entities)
             # Get the offsets output by the tokenizer
             token_offsets = text_token_offsets[col_name]
-            entity_token_offsets =
+            entity_token_offsets = 
             if self.merge_text:
 
 
