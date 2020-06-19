@@ -83,7 +83,8 @@ def _words_match_regex(words: List[str], ignore_case=False, replace_white_space=
 class ProfanityFilter:
     """Detect whether the corpus contains possible profanity content.
 
-    We use the word list from https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words
+    We use the word list from
+     https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words
 
     """
     def __init__(self, langs: Optional[Union[str, List, Tuple]] = None):
@@ -101,7 +102,9 @@ class ProfanityFilter:
                     print('download failed due to {}, retrying, {} attempt{} left'
                           .format(repr(e), retries, 's' if retries > 1 else ''))
         url_path =\
-            'https://raw.githubusercontent.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words/b36ce5c34c14cb7872dd4c2a4e55fe526138462d/{lang}'
+            'https://raw.githubusercontent.com/LDNOOBW/' \
+            'List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words/' \
+            'b36ce5c34c14cb7872dd4c2a4e55fe526138462d/{lang}'
         available_langs = {'ar', 'cs', 'da', 'de', 'en', 'eo', 'es', 'fa', 'fi', 'fr', 'hi', 'hu',
                            'it', 'ja', 'ko', 'nl', 'no', 'pl', 'pt', 'ru', 'sv', 'th', 'tlh', 'tr',
                            'zh'}
