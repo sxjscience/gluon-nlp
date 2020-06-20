@@ -1,239 +1,7 @@
-import abc
-import pandas as pd
-import numpy as np
-import multiprocessing as mp
-import warnings
 import collections
-from typing import List, Optional, Dict, Union
+import pandas as pd
 from . import constants as _C
-from ..data.filtering import LanguageIdentifier
-from ..base import INT_TYPES, FLOAT_TYPES
-from ..utils.misc import num_mp_workers
-
-
-class BaseColumn(abc.ABC):
-    type = None
-
-
-class CategoricalColumn(BaseColumn):
-    type = _C.CATEGORICAL
-
-    def __init__(self, column_data: pd.Series):
-        """
-
-        Parameters
-        ----------
-        column_data
-            The value counts
-        """
-        super().__init__()
-        self._value_counts = column_data.value_counts()
-        self._idx_to_items = list(self._value_counts.keys())
-        self._item_to_idx = {ele: i for i, ele in enumerate(self._idx_to_items)}
-
-    @property
-    def num_class(self):
-        return len(self._value_counts)
-
-    def to_idx(self, item):
-        return self._item_to_idx[item]
-
-    def to_category(self, idx):
-        return self._idx_to_items[idx]
-
-    @property
-    def value_counts(self):
-        return self._value_counts
-
-
-class NumericalColumn(BaseColumn):
-    type = _C.NUMERICAL
-
-    def __init__(self, column_data: pd.Series):
-        super().__init__()
-        self._min_value = column_data.min()
-        self._max_value = column_data.max()
-        self._avg_value = column_data.mean()
-
-    @property
-    def min_value(self):
-        return self._min_value
-
-    @property
-    def max_value(self):
-        return self._max_value
-
-    @property
-    def avg_value(self):
-        return self._avg_value
-
-
-class TextColumn(BaseColumn):
-    type = _C.TEXT
-
-    def __init__(self, column_data: pd.Series):
-        super().__init__()
-        lengths = column_data.apply(len)
-        self._min_length = lengths.min()
-        self._avg_length = lengths.mean()
-        self._max_length = lengths.max()
-        lang_id = LanguageIdentifier()
-        with mp.Pool(num_mp_workers()) as pool:
-            langs = pool.map(lang_id, column_data)
-        unique_langs, counts = np.unique(
-            np.array([ele[0] for ele in langs]),
-            return_counts=True)
-        self._lang = unique_langs[counts.argmax()]
-
-    @property
-    def lang(self):
-        return self._lang
-
-    @property
-    def min_length(self):
-        return self._min_length
-
-    @property
-    def max_length(self):
-        return self._max_length
-
-    @property
-    def avg_length(self):
-        return self._avg_length
-
-
-def _get_entity_label_type(label) -> str:
-    """
-
-    Parameters
-    ----------
-    label
-        The label of an entity
-
-    Returns
-    -------
-    type_str
-        The type of the label. Will either be categorical or numerical
-    """
-    if isinstance(label, (int, str)):
-        return _C.CATEGORICAL
-    else:
-        return _C.NUMERICAL
-
-
-class EntityColumn(BaseColumn):
-    """The Entity Column.
-
-    The elements inside the column can be
-    - a single dictionary -> 1 entity
-    - a list of dictionary -> K entities
-    - an empty list -> 0 entity
-    - None -> 0 entity
-
-    For each entity, it will be a dictionary that contains these keys
-    - start
-        The character-level start of the entity
-    - end
-        The character-level end of the entity
-    - label
-        The label information of this entity.
-
-        We support
-        - categorical labels
-            Each label can be either a unicode string or a int value.
-        - numpy array/vector labels/numerical labels
-            Each label should be a fixed-dimensional array/numerical value
-
-    """
-    type = _C.ENTITY
-
-    def __init__(self, column_data, parent):
-        super().__init__()
-        self._parent = parent
-        self._has_label = False
-        self._label_type = None
-        self._avg_entity_per_sample = 0
-        # Store count the labels
-        categorical_label_counter = collections.Counter()
-        all_span_lengths = []
-        all_entity_labels = []
-        for entities in column_data:
-            if entities is None:
-                continue
-            if isinstance(entities, dict):
-                entities = [entities]
-            assert isinstance(entities, list),\
-                'The entity type is "{}" and is not supported by ' \
-                'GluonNLP. Received entities={}'.format(type(entities), entities)
-            self._avg_entity_per_sample += len(entities)
-            for entity in entities:
-                start = entity['start']
-                end = entity['end']
-                if 'label' in entity:
-                    label = entity['label']
-                    if self._has_label is False:
-                        self._has_label = True
-                    label_type = _get_entity_label_type(label)
-                    if self._label_type is not None:
-                        assert self._label_type == label_type,\
-                            'Unmatched label types. ' \
-                            'The type of labels of all entities should be consistent. ' \
-                            'Received label type="{}".' \
-                            ' Stored label_type="{}"'.format(label_type, self._label_type)
-                    else:
-                        self._label_type = label_type
-                    if label_type == _C.CATEGORICAL:
-                        categorical_label_counter[label] += 1
-
-                has_label = len(entities[0]) == 3
-                all_span_lengths.extend([ele[1] - ele[0] for ele in entities])
-                all_entity_labels.extend([ele[2] for ele in entities])
-        if self._has_label:
-            unique_entity_labels, entity_label_counts = np.unique(all_entity_labels,
-                                                                  return_counts=True)
-            self._unique_entity_labels = unique_entity_labels
-            self._entity_label_counts = entity_label_counts
-            self._label_to_idx = {ele: i for i, ele in enumerate(self._unique_entity_labels)}
-        else:
-            self._unique_entity_labels = None
-            self._entity_label_counts = None
-
-    @property
-    def label_type(self) -> Optional[str]:
-        """
-
-        Returns
-        -------
-        ret
-            The type of the label. Should be either
-            - 'categorical'
-            - 'numerical'
-        """
-        return self._label_type
-
-    def to_idx(self, label):
-        assert self._has_label
-        return self._label_to_idx[label]
-
-    def to_label(self, idx):
-        assert self._has_label
-        return self._unique_entity_labels[idx]
-
-    @property
-    def entity_labels(self):
-        return self._unique_entity_labels
-
-    @property
-    def entity_label_counts(self):
-        return self._entity_label_counts
-
-    @property
-    def has_label(self):
-        return self._has_label
-
-    @property
-    def parent(self):
-        return self._parent
+from typing import List, Optional, Union, Dict
 
 
 def is_categorical_column(data: pd.Series,
@@ -295,13 +63,13 @@ def parse_columns(df, column_names: Optional[List[str]] = None,
     for col_name in column_names:
         if metadata is not None and col_name in metadata:
             col_type = metadata[col_name]['type']
-            if col_type == CATEGORICAL:
+            if col_type == _C.CATEGORICAL:
                 column_info[col_name] = CategoricalColumn(df[col_name])
-            elif col_type == TEXT:
+            elif col_type == _C.TEXT:
                 column_info[col_name] = TextColumn(df[col_name])
-            elif col_type == NUMERICAL:
+            elif col_type == _C.NUMERICAL:
                 column_info[col_name] = NumericalColumn(df[col_name])
-            elif col_type == ENTITY:
+            elif col_type == _C.ENTITIES:
                 parent = metadata[col_name]['parent']
                 column_info[col_name] = EntityColumn(column_data=df[col_name], parent=parent)
             else:
@@ -310,6 +78,7 @@ def parse_columns(df, column_names: Optional[List[str]] = None,
         idx = df[col_name].first_valid_index()
         if idx is None:
             # No valid index, it's safe to ignore the column
+            warnings.warn('Column Name="{}" has no valid data and is ignored.'.format(col_name))
             continue
         ele = df[col_name][idx]
         if isinstance(ele, str):
@@ -327,7 +96,8 @@ def parse_columns(df, column_names: Optional[List[str]] = None,
                 column_info[col_name] = NumericalColumn(df[col_name])
         else:
             raise KeyError('The type of the column is "{}" and is not yet supported.'
-                           ' Please consider to update your input dataframe.'.format(type(ele)))
+                           ' Please consider to update your input pandas dataframe.'
+                           .format(type(ele)))
     return column_info
 
 
@@ -369,16 +139,16 @@ class AutoNLPDataset:
         if problem_type is not None:
             for col_name in self._label_columns:
                 label_problem_type = problem_type[col_name]
-                if label_problem_type == CLASSIFICATION:
+                if label_problem_type == _C.CLASSIFICATION:
                     if col_name not in metadata:
-                        metadata[col_name]['type'] = CATEGORICAL
+                        metadata[col_name]['type'] = _C.CATEGORICAL
                     else:
-                        assert metadata[col_name]['type'] == CATEGORICAL
-                elif label_problem_type == REGRESSION:
+                        assert metadata[col_name]['type'] == _C.CATEGORICAL
+                elif label_problem_type == _C.REGRESSION:
                     if col_name not in metadata:
-                        metadata[col_name]['type'] = NUMERICAL
+                        metadata[col_name]['type'] = _C.NUMERICAL
                     else:
-                        assert metadata[col_name]['type'] == NUMERICAL
+                        assert metadata[col_name]['type'] == _C.NUMERICAL
                 else:
                     raise NotImplementedError
         self._column_info = parse_columns(self._table, metadata=metadata)
@@ -387,12 +157,12 @@ class AutoNLPDataset:
                 problem_type = dict()
                 # Try to infer the problem type of each label
                 for col_name in label_columns:
-                    if self._column_info[col_name].type == CATEGORICAL:
-                        problem_type[col_name] = CLASSIFICATION
-                    elif self._column_info[col_name].type == NUMERICAL:
-                        problem_type[col_name] = REGRESSION
-                    elif self._column_info[col_name].type == ENTITY:
-                        problem_type[col_name] = CLASSIFICATION
+                    if self._column_info[col_name].type == _C.CATEGORICAL:
+                        problem_type[col_name] = _C.CLASSIFICATION
+                    elif self._column_info[col_name].type == _C.NUMERICAL:
+                        problem_type[col_name] = _C.REGRESSION
+                    elif self._column_info[col_name].type == _C.ENTITY:
+                        problem_type[col_name] = _C.CLASSIFICATION
                     else:
                         raise NotImplementedError
             self._problem_type = problem_type

@@ -12,6 +12,7 @@ from gluonnlp.cli.data.music_generation.prepare_music_midi import _URLS as midi_
 from gluonnlp.cli.data.pretrain_corpus.prepare_bookcorpus import _URLS as book_urls
 from gluonnlp.cli.data.general_nlp_benchmark.prepare_glue import SUPERGLUE_TASK2PATH as superglue_urls
 from gluonnlp.cli.data.general_nlp_benchmark.prepare_glue import GLUE_TASK2PATH as glue_urls
+from gluonnlp.cli.data.multimodal.prepare_senteval_coco import PATH as senteval_coco_urls
 
 
 _CURR_DIR = os.path.realpath(os.path.dirname(os.path.realpath(__file__)))
@@ -111,3 +112,5 @@ if __name__ == '__main__':
                       save_path=os.path.join(_CHECK_SUM_BASE, 'glue.txt'))
     get_hash_and_size(superglue_urls,
                       save_path=os.path.join(_CHECK_SUM_BASE, 'superglue.txt'))
+    get_hash_and_size(senteval_coco_urls,
+                      save_path=os.path.join(_CHECK_SUM_BASE, 'senteval_coco.txt'))

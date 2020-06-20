@@ -1,8 +1,9 @@
-# Column Types
+# Column/Label Types
+NULL = 'null'
 CATEGORICAL = 'categorical'
 TEXT = 'text'
 NUMERICAL = 'numerical'
-ENTITY = 'entity'
+ENTITIES = 'entities'
 
 # Problem Types
 REGRESSION = 'regression'

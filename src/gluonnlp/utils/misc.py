@@ -6,7 +6,7 @@ import warnings
 import functools
 import uuid
 from types import ModuleType
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict
 import numpy as np
 import hashlib
 import requests
@@ -273,7 +273,7 @@ def parse_ctx(data_str):
     return ctx_l
 
 
-def load_checksum_stats(path: str) -> dict:
+def load_checksum_stats(path: str) -> Dict[str, str]:
     """
 
     Parameters
@@ -284,6 +284,8 @@ def load_checksum_stats(path: str) -> dict:
     Returns
     -------
     file_stats
+        The file statistics
+        url --> sha1_sum
     """
     file_stats = dict()
     with open(path, 'r', encoding='utf-8') as f:

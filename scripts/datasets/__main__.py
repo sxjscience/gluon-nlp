@@ -5,6 +5,7 @@ from .language_modeling import prepare_lm
 from .music_generation import prepare_music_midi
 from .pretrain_corpus import prepare_bookcorpus, prepare_wikipedia, prepare_openwebtext
 from .general_nlp_benchmark import prepare_glue
+from .multimodal import prepare_senteval_coco
 from gluonnlp.registry import DATA_PARSER_REGISTRY, DATA_MAIN_REGISTRY
 
 
@@ -30,10 +31,12 @@ def cli_main():
     args, other_args = parser.parse_known_args()
     if args.command == 'help':
         parser.print_help()
-    else:
+    elif args.command in DATA_PARSER_REGISTRY.list_keys():
         parser = DATA_PARSER_REGISTRY.create(args.command)
         sub_args = parser.parse_args(other_args)
         DATA_MAIN_REGISTRY.create(args.command, sub_args)
+    else:
+        parser.print_help()
 
 
 if __name__ == '__main__':
