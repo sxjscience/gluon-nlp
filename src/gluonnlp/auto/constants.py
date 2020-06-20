@@ -3,7 +3,7 @@ NULL = 'null'
 CATEGORICAL = 'categorical'
 TEXT = 'text'
 NUMERICAL = 'numerical'
-ENTITIES = 'entities'
+ENTITY = 'entity'
 
 # Problem Types
 REGRESSION = 'regression'

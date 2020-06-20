@@ -8,6 +8,7 @@ from . import constants as _C
 from ..data.vocab import Vocab
 from ..data.filtering import LanguageIdentifier
 from ..utils.misc import num_mp_workers
+__all__ = ['CategoricalColumn', 'TextColumn', 'NumericalColumn', 'EntityColumn']
 
 
 class ColumnProperty(abc.ABC):
@@ -257,7 +258,7 @@ def _get_entity_label_type(label) -> str:
         return _C.NUMERICAL
 
 
-class EntitiesColumn(ColumnProperty):
+class EntityColumn(ColumnProperty):
     """The Entities Column.
 
     The elements inside the column can be
@@ -281,7 +282,7 @@ class EntitiesColumn(ColumnProperty):
             Each label should be a fixed-dimensional array/numerical value
 
     """
-    type = _C.ENTITIES
+    type = _C.ENTITY
 
     def __init__(self, column_data, name, parent,
                  label_type=None,

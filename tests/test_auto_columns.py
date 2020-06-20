@@ -1,1 +1,1 @@
-from gluonnlp.auto.columns import TextColumn, CategoricalColumn, NumericalColumn
+from gluonnlp.auto.columns import TextColumn, CategoricalColumn, NumericalColumn, EntityColumn
