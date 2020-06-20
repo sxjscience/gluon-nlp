@@ -22,7 +22,7 @@ def list_backbone_names():
 
 def get_backbone(model_name: str,
                  root: str = get_model_zoo_home_dir(),
-                 **kwargs) -> Tuple['Block', str, BaseTokenizer, str, List]:
+                 **kwargs) -> Tuple['Block', 'Config', BaseTokenizer, str, List]:
     """Get the backbone network
 
     Parameters
@@ -37,7 +37,7 @@ def get_backbone(model_name: str,
     model_cls
         The class to construct the backbone network
     cfg
-        Path to the config file of the backbone
+        The configuration of the backbone
     tokenizer
         The tokenizer that is bound to the backbone model
     backbone_param_path
