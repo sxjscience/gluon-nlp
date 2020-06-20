@@ -194,12 +194,12 @@ class TextClassificationPretrainTransform:
             The raw entities are stored as character-level start and end offsets.
             After the preprocessing step, we will store them as the token-level
             start + end. Different from the raw character-level start + end offsets, the
-            token-level end will be used.
+            token-level start + end offsets will be used.
             - [(token_level_start, token_level_end, entity_label_id)]
             or
             - [(token_level_start, token_level_end)]
         - Categorical features
-            We transform the categorical features to the its ids.
+            We transform the categorical features to its ids.
             We indicate the missing value with a special flag.
         - Numerical features
             We keep the numerical features and indicate the missing value
@@ -243,7 +243,10 @@ class TextClassificationPretrainTransform:
         features = []
         labels = []
         # Step 1: Get the features of all text columns
-        sentence_start_in_merged = None
+        sentence_start_in_merged = None  # The start of each sentence in the merged text
+        # We will potentially slice each sentence.
+        # Thus, we will store the mapping: col_name -> (char_start, length) in the
+        # sentence_slice_info
         sentence_slice_info = dict()
         text_token_ids = OrderedDict()
         text_token_offsets = OrderedDict()
@@ -288,6 +291,8 @@ class TextClassificationPretrainTransform:
                 valid_length = len(encoded_token_ids)
                 features.append((encoded_token_ids, valid_length))
             else:
+                # We encode each sentence independently
+                # [CLS] token_ids1 [SEP], [CLS] token_ids2 [SEP]
                 trimmed_lengths = get_trimmed_lengths(lengths,
                                                       max_length=self.max_length - 2,
                                                       do_merge=False)
@@ -298,17 +303,20 @@ class TextClassificationPretrainTransform:
                                                        np.array([self._tokenizer.sep_id]))
                     features.append((encoded_token_ids, len(encoded_token_ids)))
         # Step 2: Transform all entity columns
-        # Slice from the first column
         for col_name, col_id in self.entity_columns:
             entities = sample[col_id]
+            col_info = self.column_info[col_name]
             if isinstance(entities, tuple):
                 entities = [entities]
+            else:
+                assert isinstance(entities, list)
+            if len(entities) == 0:
+                no_entity = True
             entities = np.array(entities)
             # Get the offsets output by the tokenizer
             token_offsets = text_token_offsets[col_name]
-            entity_token_offsets = 
+            entity_token_offsets =
             if self.merge_text:
-
 
 
         for col_info, ele in zip(self._column_info, sample):

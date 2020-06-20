@@ -7,7 +7,7 @@ import functools
 from mxnet.gluon import nn
 import numpy as np
 from numpy.testing import assert_allclose
-from gluonnlp.utils.misc import AverageSGDTracker, download, sha1sum
+from gluonnlp.utils.misc import AverageSGDTracker, download, sha1sum, num_mp_workers
 mx.npx.set_np()
 
 
@@ -107,3 +107,7 @@ def test_download_https(overwrite):
                         'cc-index.paths.gz',
                     sha1_hash='fac65325fdd881b75d6badc0f3caea287d91ed54',
                     overwrite=overwrite)
+
+
+def test_num_mp_workers():
+    assert 1 <= num_mp_workers(4) <= 4

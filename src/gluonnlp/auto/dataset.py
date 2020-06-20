@@ -5,9 +5,10 @@ import multiprocessing as mp
 import warnings
 import collections
 from typing import List, Optional, Dict, Union
-from .constants import *
+from . import constants as _C
 from ..data.filtering import LanguageIdentifier
 from ..base import INT_TYPES, FLOAT_TYPES
+from ..utils.misc import num_mp_workers
 
 
 class BaseColumn(abc.ABC):
@@ -15,7 +16,7 @@ class BaseColumn(abc.ABC):
 
 
 class CategoricalColumn(BaseColumn):
-    type = CATEGORICAL
+    type = _C.CATEGORICAL
 
     def __init__(self, column_data: pd.Series):
         """
@@ -46,7 +47,7 @@ class CategoricalColumn(BaseColumn):
 
 
 class NumericalColumn(BaseColumn):
-    type = NUMERICAL
+    type = _C.NUMERICAL
 
     def __init__(self, column_data: pd.Series):
         super().__init__()
@@ -68,7 +69,7 @@ class NumericalColumn(BaseColumn):
 
 
 class TextColumn(BaseColumn):
-    type = TEXT
+    type = _C.TEXT
 
     def __init__(self, column_data: pd.Series):
         super().__init__()
@@ -77,7 +78,7 @@ class TextColumn(BaseColumn):
         self._avg_length = lengths.mean()
         self._max_length = lengths.max()
         lang_id = LanguageIdentifier()
-        with mp.Pool(4) as pool:
+        with mp.Pool(num_mp_workers()) as pool:
             langs = pool.map(lang_id, column_data)
         unique_langs, counts = np.unique(
             np.array([ele[0] for ele in langs]),
@@ -101,44 +102,114 @@ class TextColumn(BaseColumn):
         return self._avg_length
 
 
+def _get_entity_label_type(label) -> str:
+    """
+
+    Parameters
+    ----------
+    label
+        The label of an entity
+
+    Returns
+    -------
+    type_str
+        The type of the label. Will either be categorical or numerical
+    """
+    if isinstance(label, (int, str)):
+        return _C.CATEGORICAL
+    else:
+        return _C.NUMERICAL
+
+
 class EntityColumn(BaseColumn):
-    type = ENTITY
+    """The Entity Column.
+
+    The elements inside the column can be
+    - a single dictionary -> 1 entity
+    - a list of dictionary -> K entities
+    - an empty list -> 0 entity
+    - None -> 0 entity
+
+    For each entity, it will be a dictionary that contains these keys
+    - start
+        The character-level start of the entity
+    - end
+        The character-level end of the entity
+    - label
+        The label information of this entity.
+
+        We support
+        - categorical labels
+            Each label can be either a unicode string or a int value.
+        - numpy array/vector labels/numerical labels
+            Each label should be a fixed-dimensional array/numerical value
+
+    """
+    type = _C.ENTITY
 
     def __init__(self, column_data, parent):
         super().__init__()
         self._parent = parent
-        self._has_label = None
+        self._has_label = False
+        self._label_type = None
         self._avg_entity_per_sample = 0
-        self._labels = dict()
+        # Store count the labels
+        categorical_label_counter = collections.Counter()
         all_span_lengths = []
         all_entity_labels = []
         for entities in column_data:
             if entities is None:
                 continue
-            if isinstance(entities, list):
-                self._avg_entity_per_sample += len(entities)
+            if isinstance(entities, dict):
+                entities = [entities]
+            assert isinstance(entities, list),\
+                'The entity type is "{}" and is not supported by ' \
+                'GluonNLP. Received entities={}'.format(type(entities), entities)
+            self._avg_entity_per_sample += len(entities)
+            for entity in entities:
+                start = entity['start']
+                end = entity['end']
+                if 'label' in entity:
+                    label = entity['label']
+                    if self._has_label is False:
+                        self._has_label = True
+                    label_type = _get_entity_label_type(label)
+                    if self._label_type is not None:
+                        assert self._label_type == label_type,\
+                            'Unmatched label types. ' \
+                            'The type of labels of all entities should be consistent. ' \
+                            'Received label type="{}".' \
+                            ' Stored label_type="{}"'.format(label_type, self._label_type)
+                    else:
+                        self._label_type = label_type
+                    if label_type == _C.CATEGORICAL:
+                        categorical_label_counter[label] += 1
+
                 has_label = len(entities[0]) == 3
                 all_span_lengths.extend([ele[1] - ele[0] for ele in entities])
                 all_entity_labels.extend([ele[2] for ele in entities])
-            else:
-                self._avg_entity_per_sample += 1
-                assert isinstance(entities, tuple)
-                has_label = len(entities) == 3
-                all_span_lengths.append(entities[1] - entities[0])
-                all_entity_labels.append(entities[2])
-            if self._has_label is None:
-                self._has_label = has_label
-            else:
-                assert self._has_label == has_label, \
-                    'All entities must either have label or do not have label'
         if self._has_label:
-            unique_entity_labels, entity_label_counts = np.unique(all_entity_labels, return_counts=True)
+            unique_entity_labels, entity_label_counts = np.unique(all_entity_labels,
+                                                                  return_counts=True)
             self._unique_entity_labels = unique_entity_labels
             self._entity_label_counts = entity_label_counts
             self._label_to_idx = {ele: i for i, ele in enumerate(self._unique_entity_labels)}
         else:
             self._unique_entity_labels = None
             self._entity_label_counts = None
+
+    @property
+    def label_type(self) -> Optional[str]:
+        """
+
+        Returns
+        -------
+        ret
+            The type of the label. Should be either
+            - 'categorical'
+            - 'numerical'
+        """
+        return self._label_type
 
     def to_idx(self, label):
         assert self._has_label

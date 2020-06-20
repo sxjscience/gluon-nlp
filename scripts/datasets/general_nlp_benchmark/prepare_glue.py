@@ -320,8 +320,8 @@ def read_rte_superglue(dir_path):
 def read_wic(dir_path):
     df_dict = dict()
     meta_data = dict()
-    meta_data['entities1'] = {'type': 'entity', 'parent': 'sentence1'}
-    meta_data['entities2'] = {'type': 'entity', 'parent': 'sentence2'}
+    meta_data['entities1'] = {'type': 'entities', 'parent': 'sentence1'}
+    meta_data['entities2'] = {'type': 'entities', 'parent': 'sentence2'}
 
     for fold in ['train', 'val', 'test']:
         if fold != 'test':
@@ -340,13 +340,13 @@ def read_wic(dir_path):
             end2 = row['end2']
             if fold == 'test':
                 out.append([sentence1, sentence2,
-                            (start1, end1),
-                            (start2, end2)])
+                            {'start': start1, 'end': end1},
+                            {'start': start2, 'end': end2}])
             else:
                 label = row['label']
                 out.append([sentence1, sentence2,
-                            (start1, end1),
-                            (start2, end2),
+                            {'start': start1, 'end': end1},
+                            {'start': start2, 'end': end2},
                             label])
         df = pd.DataFrame(out, columns=columns)
         df_dict[fold] = df
@@ -357,8 +357,8 @@ def read_wsc(dir_path):
     df_dict = dict()
     tokenizer = WhitespaceTokenizer()
     meta_data = dict()
-    meta_data['noun'] = {'type': 'entity', 'parent': 'text'}
-    meta_data['pronoun'] = {'type': 'entity', 'parent': 'text'}
+    meta_data['noun'] = {'type': 'entities', 'parent': 'text'}
+    meta_data['pronoun'] = {'type': 'entities', 'parent': 'text'}
     for fold in ['train', 'val', 'test']:
         jsonl_path = os.path.join(dir_path, '{}.jsonl'.format(fold))
         df = read_jsonl_superglue(jsonl_path)
@@ -374,7 +374,7 @@ def read_wsc(dir_path):
             span2_text = target['span2_text']
             # Build entity
             # list of entities
-            # 'entity': {'start': 0, 'end': 100}
+            # 'entities': {'start': 0, 'end': 100}
             tokens, offsets = tokenizer.encode_with_offsets(text, str)
             pos_start1 = offsets[span1_index][0]
             pos_end1 = pos_start1 + len(span1_text)
@@ -382,12 +382,12 @@ def read_wsc(dir_path):
             pos_end2 = pos_start2 + len(span2_text)
             if fold == 'test':
                 samples.append({'text': text,
-                                'noun': (pos_start1, pos_end1),
-                                'pronoun': (pos_start2, pos_end2)})
+                                'noun': {'start': pos_start1, 'end': pos_end1},
+                                'pronoun': {'start': pos_start2, 'end': pos_end2}})
             else:
                 samples.append({'text': text,
-                                'noun': (pos_start1, pos_end1),
-                                'pronoun': (pos_start2, pos_end2),
+                                'noun': {'start': pos_start1, 'end': pos_end1},
+                                'pronoun': {'start': pos_start2, 'end': pos_end2},
                                 'label': label})
         df = pd.DataFrame(samples)
         df_dict[fold] = df
@@ -406,8 +406,8 @@ def read_boolq(dir_path):
 def read_record(dir_path):
     df_dict = dict()
     meta_data = dict()
-    meta_data['entities'] = {'type': 'entity', 'parent': 'text'}
-    meta_data['answers'] = {'type': 'entity', 'parent': 'text'}
+    meta_data['entities'] = {'type': 'entities', 'parent': 'text'}
+    meta_data['answers'] = {'type': 'entities', 'parent': 'text'}
     for fold in ['train', 'val', 'test']:
         if fold != 'test':
             columns = ['source', 'text', 'entities', 'query', 'answers']
@@ -422,15 +422,11 @@ def read_record(dir_path):
             passage = row['passage']
             text = passage['text']
             entities = passage['entities']
-            entities = [(ele['start'], ele['end']) for ele in entities]
+            entities = [{'start': ele['start'], 'end': ele['end']} for ele in entities]
             for qas in row['qas']:
                 query = qas['query']
                 if fold != 'test':
-                    answer_entities = []
-                    for answer in qas['answers']:
-                        start = answer['start']
-                        end = answer['end']
-                        answer_entities.append((start, end))
+                    answer_entities = qas['answers']
                     out.append((source, text, entities, query, answer_entities))
                 else:
                     out.append((source, text, entities, query))
@@ -575,7 +571,7 @@ def get_tasks(benchmark, task_names):
 @DATA_PARSER_REGISTRY.register('prepare_glue')
 def get_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--benchmark", choices=['glue', 'superglue', 'sts'],
+    parser.add_argument("--benchmark", choices=['glue', 'superglue'],
                         default='glue', type=str)
     parser.add_argument("-d", "--data_dir", help="directory to save data to", type=str,
                         default=None)

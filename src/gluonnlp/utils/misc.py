@@ -17,7 +17,6 @@ try:
 except ImportError:
     tqdm = None
 from .lazy_imports import try_import_boto3
-from mxnet.gluon.utils import shape_is_known, replace_file
 from collections import OrderedDict
 import glob as _glob
 
@@ -43,6 +42,7 @@ def glob(url, separator=','):
     for pattern in patterns:
         result.extend(_glob.glob(os.path.expanduser(pattern.strip())))
     return result
+
 
 class AverageSGDTracker(object):
     def __init__(self, params=None):
@@ -97,6 +97,7 @@ class AverageSGDTracker(object):
         self._n_steps = 0
 
     def step(self):
+        from mxnet.gluon.utils import shape_is_known
         assert self._track_params is not None, 'You will need to use `.apply(params)`' \
                                                ' to initialize the MovingAverageTracker.'
         for k, v in self._track_params.items():
@@ -401,6 +402,7 @@ def download(url: str,
     fname
         The file path of the downloaded file.
     """
+    from mxnet.gluon.utils import replace_file
     is_s3 = url.startswith(S3_PREFIX)
     if is_s3:
         boto3 = try_import_boto3()
@@ -536,3 +538,8 @@ def check_version(min_version: str,
             warnings.warn(msg)
         else:
             raise AssertionError(msg)
+
+
+def num_mp_workers(max_worker=4):
+    import multiprocessing as mp
+    return min(mp.cpu_count(), max_worker)
