@@ -18,4 +18,6 @@ with tempfile.TemporaryDirectory() as root:
 
 
 def test_text_column():
-    column_property = TextColumn(test_snli_df['sentence1'])
+    text_column = TextColumn(test_snli_df['sentence1'])
+    assert text_column.num_sample == 1000
+

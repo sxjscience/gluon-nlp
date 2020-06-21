@@ -226,12 +226,13 @@ class TextColumn(ColumnProperty):
         return self._avg_length
 
     def parse_test(self, column_data: pd.Series):
-        return TextColumn(column_data=column_data, name=self.name, lang=self.lang)
+        return TextColumn(column_data=column_data, lang=self.lang)
 
     def info(self):
-        return super().info([('min/avg/max length',
+        return super().info([('length, min/avg/max',
                               '{:d}/{:.2f}/{:d}'.format(self.min_length,
-                                                        self.avg_length, self.max_length))])
+                                                        self.avg_length, self.max_length)),
+                             ('language', self.lang)])
 
 
 def _get_entity_label_type(label) -> str:
