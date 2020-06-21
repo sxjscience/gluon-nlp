@@ -203,11 +203,7 @@ class LanguageIdentifier:
                 else:
                     raise NotImplementedError
             self._model_path = model_path
-            with warnings.catch_warnings():
-                # Ignore the DeprecationWarning. For more details,
-                # See issue: https://github.com/facebookresearch/fastText/issues/1056
-                warnings.filterwarnings("ignore", category=Warning)
-                model = fasttext.load_model(model_path)
+            model = fasttext.load_model(model_path)
             self._model = model
         elif algo == 'langid':
             langid = try_import_langid()
@@ -254,11 +250,7 @@ class LanguageIdentifier:
             setattr(self, k, v)
         if self._use_fasttext:
             fasttext = try_import_fasttext()
-            with warnings.catch_warnings():
-                # Ignore the DeprecationWarning. For more details,
-                # See issue: https://github.com/facebookresearch/fastText/issues/1056
-                warnings.filterwarnings("ignore", category=Warning)
-                self._model = fasttext.load_model(self._model_path)
+            self._model = fasttext.load_model(self._model_path)
         else:
             langid = try_import_langid()
             self._model = langid.langid.LanguageIdentifier.from_modelstring(self._model_str)
