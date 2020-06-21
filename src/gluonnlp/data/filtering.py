@@ -181,7 +181,7 @@ class LanguageIdentifier:
         }
 
     """
-    def __init__(self, algo='langid', model_path=None):
+    def __init__(self, algo='fasttext_compressed', model_path=None):
         assert algo in ['langid', 'fasttext', 'fasttext_compressed']
         self._algo = algo
         self._use_fasttext = algo.startswith('fasttext')

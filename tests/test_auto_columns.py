@@ -20,4 +20,5 @@ with tempfile.TemporaryDirectory() as root:
 def test_text_column():
     text_column = TextColumn(test_snli_df['sentence1'])
     assert text_column.num_sample == 1000
+    assert text_column.lang == 'en'
 
