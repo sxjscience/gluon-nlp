@@ -130,8 +130,8 @@ class CategoricalColumnInfo(ColumnInfo):
         return self._freq
 
     def parse_test(self, column_data: pd.Series):
-        return self.__init__(column_data=column_data,
-                             categories=self.categories)
+        return CategoricalColumnInfo(column_data=column_data,
+                                     categories=self.categories)
 
     def info(self):
         return super().info(
@@ -167,7 +167,7 @@ class NumericalColumnInfo(ColumnInfo):
         return self._shape
 
     def parse_test(self, column_data: pd.Series):
-        return self.__init__(column_data=column_data, shape=self.shape)
+        return NumericalColumnInfo(column_data=column_data, shape=self.shape)
 
     def info(self):
         return super().info([('shape', self.shape)])
@@ -225,7 +225,7 @@ class TextColumnInfo(ColumnInfo):
         return self._avg_length
 
     def parse_test(self, column_data: pd.Series):
-        return self.__init__(column_data=column_data, lang=self.lang)
+        return TextColumnInfo(column_data=column_data, lang=self.lang)
 
     def info(self):
         return super().info([('length, min/avg/max',
@@ -485,11 +485,11 @@ class EntityColumnInfo(ColumnInfo):
         return self._num_total_entity
 
     def parse_test(self, column_data: pd.Series):
-        return self.__init__(column_data=column_data,
-                             parent=self.parent,
-                             label_type=self.label_type,
-                             label_shape=self.label_shape,
-                             label_vocab=self._label_vocab)
+        return EntityColumnInfo(column_data=column_data,
+                                parent=self.parent,
+                                label_type=self.label_type,
+                                label_shape=self.label_shape,
+                                label_vocab=self._label_vocab)
 
     def info(self):
         additional_attributes = [('#total entity', self.num_total_entity),

@@ -2,7 +2,8 @@ import os
 import tempfile
 import pandas as pd
 from gluonnlp.base import get_repo_url
-from gluonnlp.auto.column_info import TextColumn, CategoricalColumn, NumericalColumn, EntityColumn
+from gluonnlp.auto.column_info import TextColumnInfo, CategoricalColumnInfo,\
+                                      NumericalColumnInfo, EntityColumnInfo
 from gluonnlp.utils.misc import download
 
 
@@ -17,8 +18,12 @@ with tempfile.TemporaryDirectory() as root:
                           'sentence2_entity': {'type': 'entity', 'parent': 'sentence2'}}
 
 
-def test_text_column():
-    text_column = TextColumn(test_snli_df['sentence1'])
-    assert text_column.num_sample == 1000
-    assert text_column.lang == 'en'
+def test_text_column_info():
+    text_column_info = TextColumnInfo(test_snli_df['sentence1'])
+    assert text_column_info.num_sample == 1000
+    assert text_column_info.lang == 'en'
+    text_column_info2 = text_column_info.parse_test(test_snli_df['sentence2'])
+    print(text_column_info2)
+
+
 
