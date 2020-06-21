@@ -1,7 +1,7 @@
 import collections
 import pandas as pd
 from . import constants as _C
-from .columns import CategoricalColumn, EntityColumn, TextColumn, NumericalColumn
+from .column_info import CategoricalColumn, EntityColumn, TextColumn, NumericalColumn
 from typing import List, Optional, Union, Dict
 
 

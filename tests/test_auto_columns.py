@@ -2,7 +2,7 @@ import os
 import tempfile
 import pandas as pd
 from gluonnlp.base import get_repo_url
-from gluonnlp.auto.columns import TextColumn, CategoricalColumn, NumericalColumn, EntityColumn
+from gluonnlp.auto.column_info import TextColumn, CategoricalColumn, NumericalColumn, EntityColumn
 from gluonnlp.utils.misc import download
 
 
