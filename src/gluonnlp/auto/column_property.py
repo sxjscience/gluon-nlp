@@ -381,7 +381,7 @@ class EntityColumnProperty(ColumnProperty):
 
         Returns
         -------
-        entities
+        char_offsets
             Numpy array. Shape is (#entities, 2)
         labels
             Either None, or the transformed label
@@ -404,7 +404,7 @@ class EntityColumnProperty(ColumnProperty):
             else:
                 raise NotImplementedError
         labels = None if self.label_type == _C.NULL else []
-        entities = []
+        char_offsets = []
         if isinstance(data, dict) or isinstance(data, tuple):
             data = [data]
         for ele in data:
@@ -422,11 +422,11 @@ class EntityColumnProperty(ColumnProperty):
                     labels.append(self.label_to_idx(ele[2]))
                 elif self.label_type == _C.NUMERICAL:
                     labels.append(ele[2])
-            entities.append((start, end))
-        entities = np.stack(entities)
+            char_offsets.append((start, end))
+        char_offsets = np.stack(char_offsets)
         if self.label_type != _C.NULL:
             labels = np.stack(labels)
-        return entities, labels
+        return char_offsets, labels
 
     @property
     def label_shape(self) -> Optional[Tuple[int]]:

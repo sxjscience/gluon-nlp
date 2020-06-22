@@ -12,9 +12,9 @@ from gluonnlp.utils.misc import download
 
 with tempfile.TemporaryDirectory() as root:
     test_snli_df_path = download(get_repo_url()
-                                 + 'autonlp_test_datasets/snli_test_dataset_022d2d.pd.pkl',
+                                 + 'autonlp_test_datasets/snli_test_dataset-0de8d633.pd.pkl',
                                  path=os.path.join(root, 'test.pkl'),
-                                 sha1_hash='022d2de30ceae79c2f1dffa9eeb3ddd312f2de51')
+                                 sha1_hash='0de8d63354c33d66f34c1e4cc2b4289a9f8c8a3e')
     test_snli_df = pd.read_pickle(test_snli_df_path)
     test_snli_metadata = {'sentence1_entity_numeric': {'type': 'entity', 'parent': 'sentence1'},
                           'sentence1_entity_categorical': {'type': 'entity', 'parent': 'sentence1'},
@@ -107,5 +107,35 @@ def test_entity_column_property():
     assert column_prop.label_freq == [1331, 2236, 194, 519, 384, 2861, 4508, 303,
                                       96, 176, 188, 1295, 200, 1626]
     with mp.Pool(2) as pool:
-        transformed = pool.map(column_prop.transform, sentence1_entity_categorical.tolist())
+        transformed_data = pool.map(column_prop.transform, sentence1_entity_categorical.tolist())
+    for (merged_char_offsets, merged_labels), original_labeled_entities in \
+            zip(transformed_data, sentence1_entity_categorical.tolist()):
+        for offset, label, entity in zip(merged_char_offsets, merged_labels,
+                                         original_labeled_entities):
+            assert offset[0] == entity['start']
+            assert offset[1] == entity['end']
+            assert column_prop.idx_to_label(label) == entity['label']
 
+    # Test for None
+    sentence1_entity_categorical_with_none = sentence1_entity_categorical.copy().iloc[1:5]
+    sentence1_entity_categorical_with_none[0] = None
+    column_prop2 = column_prop.parse_other(sentence1_entity_categorical_with_none)
+    assert column_prop2.num_missing_sample == 1
+    assert column_prop2.label_keys == column_prop.label_keys
+    merged_char_offsets, merged_labels = column_prop2.transform(
+        sentence1_entity_categorical_with_none[0])
+    assert merged_char_offsets.shape == (0, 2)
+    assert merged_labels.shape == (0,)
+
+    # Test for Entity columns without label
+    sentence2_entity = test_snli_df['sentence2_entity']
+    column_prop = EntityColumnProperty(
+        sentence2_entity,
+        parent=test_snli_metadata['sentence2_entity']['parent'])
+    print(column_prop)
+    assert column_prop.num_sample == 8344
+    assert column_prop.name == 'sentence2_entity'
+    assert column_prop.parent == 'sentence2'
+    merged_char_offsets, merged_labels = column_prop.transform(sentence2_entity[0])
+    assert merged_labels is None
+    assert merged_char_offsets.shape == (15, 2)
