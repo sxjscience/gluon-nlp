@@ -48,13 +48,13 @@ class ColumnProperty(abc.ABC):
         classname = self.__class__.__name__
         padding = 3
         ret = '{}(\n'.format(classname)
-        ret += ' ' * padding + 'name={}\n'.format(self.name)
+        ret += ' ' * padding + 'name="{}"\n'.format(self.name)
         ret += ' ' * padding + '#total/missing={}/{}\n'.format(self.num_sample,
                                                              self.num_missing_sample)
         if additional_attributes is not None:
             for key, info in additional_attributes:
                 ret += ' ' * padding + '{}={}\n'.format(key, str(info))
-        ret += ')'
+        ret += ')\n'
         return ret
 
     def __repr__(self):
