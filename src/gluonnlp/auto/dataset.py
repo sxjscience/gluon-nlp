@@ -69,14 +69,18 @@ def get_column_properties(df, column_names: Optional[List[str]] = None,
             col_type = metadata[col_name]['type']
             if col_type == _C.CATEGORICAL:
                 column_property_dict[col_name] = CategoricalColumnProperty(df[col_name])
+                continue
             elif col_type == _C.TEXT:
                 column_property_dict[col_name] = TextColumnProperty(df[col_name])
+                continue
             elif col_type == _C.NUMERICAL:
                 column_property_dict[col_name] = NumericalColumnProperty(df[col_name])
+                continue
             elif col_type == _C.ENTITY:
                 parent = metadata[col_name]['parent']
                 column_property_dict[col_name] = EntityColumnProperty(column_data=df[col_name],
                                                                       parent=parent)
+                continue
             else:
                 raise KeyError('Column type is not supported.'
                                ' Type="{}"'.format(col_type))
