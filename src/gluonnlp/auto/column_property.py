@@ -8,13 +8,14 @@ from . import constants as _C
 from ..data.vocab import Vocab
 from ..data.filtering import LanguageIdentifier
 from ..utils.misc import num_mp_workers
-__all__ = ['CategoricalColumnInfo', 'TextColumnInfo', 'NumericalColumnInfo', 'EntityColumnInfo']
+__all__ = ['CategoricalColumnProperty', 'TextColumnProperty', 'NumericalColumnProperty', 'EntityColumnProperty']
 
 
-class ColumnInfo(abc.ABC):
+class ColumnProperty(abc.ABC):
     type = None
 
     def __init__(self, column_data: pd.Series):
+        assert isinstance(column_data, pd.Series), 'Currently, the input column data must be a Pandas Series.'
         self._num_sample = len(column_data)
         self._num_missing_samples = column_data.isnull().sum().sum()
         self._name = column_data.name
@@ -39,7 +40,7 @@ class ColumnInfo(abc.ABC):
         return ele
 
     @abc.abstractmethod
-    def parse_test(self, column_data: pd.Series):
+    def parse_other(self, column_data: pd.Series):
         """Parse the test column data"""
         pass
 
@@ -60,7 +61,7 @@ class ColumnInfo(abc.ABC):
         return self.info()
 
 
-class CategoricalColumnInfo(ColumnInfo):
+class CategoricalColumnProperty(ColumnProperty):
     type = _C.CATEGORICAL
 
     def __init__(self, column_data: pd.Series,
@@ -129,8 +130,8 @@ class CategoricalColumnInfo(ColumnInfo):
     def frequencies(self):
         return self._freq
 
-    def parse_test(self, column_data: pd.Series):
-        return CategoricalColumnInfo(column_data=column_data,
+    def parse_other(self, column_data: pd.Series):
+        return CategoricalColumnProperty(column_data=column_data,
                                      categories=self.categories)
 
     def info(self):
@@ -140,7 +141,7 @@ class CategoricalColumnInfo(ColumnInfo):
              ('freq', self.frequencies)])
 
 
-class NumericalColumnInfo(ColumnInfo):
+class NumericalColumnProperty(ColumnProperty):
     type = _C.NUMERICAL
 
     def __init__(self, column_data: pd.Series,
@@ -166,14 +167,14 @@ class NumericalColumnInfo(ColumnInfo):
     def shape(self):
         return self._shape
 
-    def parse_test(self, column_data: pd.Series):
-        return NumericalColumnInfo(column_data=column_data, shape=self.shape)
+    def parse_other(self, column_data: pd.Series):
+        return NumericalColumnProperty(column_data=column_data, shape=self.shape)
 
     def info(self):
         return super().info([('shape', self.shape)])
 
 
-class TextColumnInfo(ColumnInfo):
+class TextColumnProperty(ColumnProperty):
     type = _C.TEXT
 
     def __init__(self, column_data: pd.Series, lang=None):
@@ -224,8 +225,8 @@ class TextColumnInfo(ColumnInfo):
     def avg_length(self):
         return self._avg_length
 
-    def parse_test(self, column_data: pd.Series):
-        return TextColumnInfo(column_data=column_data, lang=self.lang)
+    def parse_other(self, column_data: pd.Series):
+        return TextColumnProperty(column_data=column_data, lang=self.lang)
 
     def info(self):
         return super().info([('length, min/avg/max',
@@ -255,7 +256,7 @@ def _get_entity_label_type(label) -> str:
         return _C.NUMERICAL
 
 
-class EntityColumnInfo(ColumnInfo):
+class EntityColumnProperty(ColumnProperty):
     """The Entities Column.
 
     The elements inside the column can be
@@ -484,12 +485,12 @@ class EntityColumnInfo(ColumnInfo):
     def num_total_entity(self):
         return self._num_total_entity
 
-    def parse_test(self, column_data: pd.Series):
-        return EntityColumnInfo(column_data=column_data,
-                                parent=self.parent,
-                                label_type=self.label_type,
-                                label_shape=self.label_shape,
-                                label_vocab=self._label_vocab)
+    def parse_other(self, column_data: pd.Series):
+        return EntityColumnProperty(column_data=column_data,
+                                    parent=self.parent,
+                                    label_type=self.label_type,
+                                    label_shape=self.label_shape,
+                                    label_vocab=self._label_vocab)
 
     def info(self):
         additional_attributes = [('#total entity', self.num_total_entity),
