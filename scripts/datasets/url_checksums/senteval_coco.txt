@@ -1,0 +1,3 @@
+https://dl.fbaipublicfiles.com/senteval/coco_r101_feat/train.pkl d7a8777444fd5cfcd08dd955c20e0f5fcd76b447 1069474034
+https://dl.fbaipublicfiles.com/senteval/coco_r101_feat/valid.pkl 33c30f36e4de6e84b8e028c6ba502a3dc013b090 46658238
+https://dl.fbaipublicfiles.com/senteval/coco_r101_feat/test.pkl 11665a833803ae0456ec06766e6bfcaf34651a93 46654218
