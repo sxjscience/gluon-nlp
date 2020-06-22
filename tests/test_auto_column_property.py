@@ -29,7 +29,7 @@ def test_text_column_property():
     assert text_column_property.num_missing_sample == 0
     assert text_column_property.min_length == 16
     assert text_column_property.max_length == 229
-    assert text_column_property.name == 'sentence2'
+    assert text_column_property.name == 'sentence1'
     assert text_column_property.lang == 'en'
     text_column_property2 = text_column_property.parse_other(test_snli_df['sentence2'])
     assert text_column_property2.min_length == 11
