@@ -164,6 +164,9 @@ class NumericalColumnProperty(ColumnProperty):
                                      ' shape in the dataset is {}'.format(shape, inferred_shape)
         self._shape = shape
 
+    def transform(self, ele):
+        return np.array(ele, dtype=np.float32)
+
     @property
     def shape(self):
         return self._shape

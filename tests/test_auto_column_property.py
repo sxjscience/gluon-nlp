@@ -3,22 +3,13 @@ import tempfile
 import numpy as np
 import pandas as pd
 import multiprocessing as mp
-from gluonnlp.base import get_repo_url
 from gluonnlp.auto import constants as _C
 from gluonnlp.auto.column_property import TextColumnProperty, CategoricalColumnProperty,\
                                       NumericalColumnProperty, EntityColumnProperty
-from gluonnlp.utils.misc import download
+from gluonnlp.utils.testing import autonlp_snli_testdata
 
 
-with tempfile.TemporaryDirectory() as root:
-    test_snli_df_path = download(get_repo_url()
-                                 + 'autonlp_test_datasets/snli_test_dataset-0de8d633.pd.pkl',
-                                 path=os.path.join(root, 'test.pkl'),
-                                 sha1_hash='0de8d63354c33d66f34c1e4cc2b4289a9f8c8a3e')
-    test_snli_df = pd.read_pickle(test_snli_df_path)
-    test_snli_metadata = {'sentence1_entity_numeric': {'type': 'entity', 'parent': 'sentence1'},
-                          'sentence1_entity_categorical': {'type': 'entity', 'parent': 'sentence1'},
-                          'sentence2_entity': {'type': 'entity', 'parent': 'sentence2'}}
+test_snli_df, test_snli_metadata = autonlp_snli_testdata()
 
 
 def test_text_column_property():
