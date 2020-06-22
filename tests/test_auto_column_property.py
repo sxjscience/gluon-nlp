@@ -133,7 +133,8 @@ def test_entity_column_property():
         sentence2_entity,
         parent=test_snli_metadata['sentence2_entity']['parent'])
     print(column_prop)
-    assert column_prop.num_sample == 8344
+    assert column_prop.num_sample == 1000
+    assert column_prop.num_total_entity == 8344
     assert column_prop.name == 'sentence2_entity'
     assert column_prop.parent == 'sentence2'
     merged_char_offsets, merged_labels = column_prop.transform(sentence2_entity[0])

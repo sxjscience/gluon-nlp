@@ -158,12 +158,11 @@ class NumericalColumnProperty(ColumnProperty):
         super().__init__(column_data=column_data)
         idx = column_data.first_valid_index()
         val = column_data[idx]
-        shape = np.array(val).shape
-        if shape is None:
-            self._shape = shape
-        else:
-            assert self._shape == shape, 'Shape mismatch!. Expected shape={},' \
-                                         ' shape in the dataset is {}'.format(self._shape, shape)
+        inferred_shape = np.array(val).shape
+        if shape is not None:
+            shape == inferred_shape, 'Shape mismatch!. Expected shape={},' \
+                                     ' shape in the dataset is {}'.format(shape, inferred_shape)
+        self._shape = shape
 
     @property
     def shape(self):
