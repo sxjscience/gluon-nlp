@@ -236,13 +236,12 @@ class TabularNLPDataset:
         return self._label_columns
 
     def __repr__(self):
-        ret = 'Problem Type: {}\n'.format(self.problem_type)
-        ret += 'Feature Columns:\n'
+        ret = 'Problem Type: {}, Is Test Dataset: {}\n'.format(self.problem_type, self.is_test)
+        ret += 'Feature Columns:\n\n'
         for col_name in self.feature_columns:
-            ret += '- Column="{}"\n'.format(col_name)
-            ret += str(self.column_property_dict[col_name])
-        ret = 'Label Columns:\n'
+            ret += '- ' + str(self.column_property_dict[col_name])
+        ret += '\n'
+        ret += 'Label Columns:\n\n'
         for col_name in self.label_columns:
-            ret += '- Column="{}"\n'.format(col_name)
-            ret += str(self.column_property_dict[col_name])
+            ret += '- ' + str(self.column_property_dict[col_name])
         return ret
