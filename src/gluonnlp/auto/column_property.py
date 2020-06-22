@@ -17,7 +17,7 @@ class ColumnProperty(abc.ABC):
     def __init__(self, column_data: pd.Series):
         assert isinstance(column_data, pd.Series), 'Currently, the input column data must be a Pandas Series.'
         self._num_sample = len(column_data)
-        self._num_missing_samples = column_data.isnull().sum().sum()
+        self._num_missing_samples = column_data.isnull().sum().sum().item()
         self._name = column_data.name
 
     @property
@@ -156,12 +156,14 @@ class NumericalColumnProperty(ColumnProperty):
             The shape of the numerical values
         """
         super().__init__(column_data=column_data)
+        idx = column_data.first_valid_index()
+        val = column_data[idx]
+        shape = np.array(val).shape
         if shape is None:
-            idx = column_data.first_valid_index()
-            val = column_data[idx]
-            self._shape = np.array(val).shape
-        else:
             self._shape = shape
+        else:
+            assert self._shape == shape, 'Shape mismatch!. Expected shape={},' \
+                                         ' shape in the dataset is {}'.format(self._shape, shape)
 
     @property
     def shape(self):
@@ -295,8 +297,6 @@ class EntityColumnProperty(ColumnProperty):
         ----------
         column_data
             Column data
-        name
-            Name of the column
         parent
             The column name of its parent
         label_type
@@ -305,6 +305,11 @@ class EntityColumnProperty(ColumnProperty):
             - null
             - categorical
             - numerical
+        label_shape
+            The shape of the label. Only be available when the entity contains numerical label
+        label_vocab
+            The vocabulary of the categorical label.
+            It is only available when the entity contains categorical label.
         """
         super().__init__(column_data=column_data)
         self._parent = parent
@@ -369,8 +374,9 @@ class EntityColumnProperty(ColumnProperty):
                                     for ele in self._label_vocab.all_tokens]
 
     def transform(self,
-                  data: Optional[Union[dict, List[dict]]]) -> Tuple[np.ndarray,
-                                                                    Optional[np.ndarray]]:
+                  data: Optional[Union[dict, List[dict],
+                                       Tuple, List[Tuple]]]) -> Tuple[np.ndarray,
+                                                                      Optional[np.ndarray]]:
         """Transform the element to a formalized format
 
         Returns
@@ -402,7 +408,7 @@ class EntityColumnProperty(ColumnProperty):
         if isinstance(data, dict) or isinstance(data, tuple):
             data = [data]
         for ele in data:
-            if isinstance(data, dict):
+            if isinstance(ele, dict):
                 start = ele['start']
                 end = ele['end']
                 if self.label_type == _C.CATEGORICAL:
@@ -418,7 +424,7 @@ class EntityColumnProperty(ColumnProperty):
                     labels.append(ele[2])
             entities.append((start, end))
         entities = np.stack(entities)
-        if self.label_type is not None:
+        if self.label_type != _C.NULL:
             labels = np.stack(labels)
         return entities, labels
 
@@ -494,10 +500,10 @@ class EntityColumnProperty(ColumnProperty):
 
     def info(self):
         additional_attributes = [('#total entity', self.num_total_entity),
-                                 ('#entity per sample',
-                                  '{.2f}'.format(self.avg_entity_per_sample))]
+                                 ('num entity per sample',
+                                  '{:.2f}'.format(self.avg_entity_per_sample))]
         if self.label_type == _C.CATEGORICAL:
-            additional_attributes.append(('#categories', len(self.label_keys)))
+            additional_attributes.append(('num categories', len(self.label_keys)))
             additional_attributes.append(('max/min freq',
                                           '{}/{}'.format(max(self.label_freq),
                                                          min(self.label_freq))))
