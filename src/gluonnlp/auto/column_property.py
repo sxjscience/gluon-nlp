@@ -204,13 +204,10 @@ class TextColumnProperty(ColumnProperty):
             self._lang = lang
         else:
             # Determine the language
-            lang_id = LanguageIdentifier()
-            with mp.Pool(num_mp_workers()) as pool:
-                langs = pool.map(lang_id, column_data)
-            unique_langs, counts = np.unique(
-                np.array([ele[0] for ele in langs]),
-                return_counts=True)
-            self._lang = unique_langs[counts.argmax()]
+            lang_id = LanguageIdentifier(algo='langid')
+            merged_string = ' '.join(column_data[:100].tolist())
+            lang = lang_id(merged_string)
+            self._lang = lang
 
     @property
     def num_samples(self):
