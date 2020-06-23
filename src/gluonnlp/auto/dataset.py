@@ -92,8 +92,8 @@ def get_column_properties(df, column_names: Optional[List[str]] = None,
             continue
         ele = df[col_name][idx]
         # Try to inference the categorical column
-        if isinstance(ele, collections.Hashable):
-            # Try to tell if the column is a text column / categorical column
+        if isinstance(ele, collections.Hashable) and not isinstance(ele, FLOAT_TYPES):
+            # Try to tell if the column is a categorical column
             is_categorical = is_categorical_column(df[col_name])
             if is_categorical:
                 column_properties[col_name] = CategoricalColumnProperty(df[col_name])
