@@ -245,7 +245,8 @@ class TabularDataset:
         for col_name in self.feature_columns:
             ret += '- ' + str(self.column_properties[col_name])
         ret += '\n'
-        ret += 'Label Columns:\n\n'
-        for col_name in self.label_columns:
-            ret += '- ' + str(self.column_properties[col_name])
+        if self.label_columns is not None:
+            ret += 'Label Columns:\n\n'
+            for col_name in self.label_columns:
+                ret += '- ' + str(self.column_properties[col_name])
         return ret
