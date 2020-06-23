@@ -240,7 +240,7 @@ class TabularDataset:
                 raise NotImplementedError('Cannot infer the problem type')
         return problem_type
 
-    def __repr__(self):
+    def __str__(self):
         ret = 'Feature Columns:\n\n'
         for col_name in self.feature_columns:
             ret += '- ' + str(self.column_properties[col_name])
