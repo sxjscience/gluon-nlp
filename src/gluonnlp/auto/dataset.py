@@ -114,6 +114,34 @@ def get_column_properties(df, column_names: Optional[List[str]] = None,
     return column_properties
 
 
+def convert_text_to_numeric_df(df):
+    """Try to convert the text columns in the input data-frame to numerical columns
+
+    Returns
+    -------
+    new_df
+    """
+    conversion_cols = dict()
+    for col_name in df.columns:
+        try:
+            dat = pd.to_numeric(df[col_name])
+            conversion_cols[col_name] = dat
+        except Exception:
+            pass
+        finally:
+            pass
+    if len(conversion_cols) == 0:
+        return df
+    else:
+        series_l = dict()
+        for col_name in df.columns:
+            if col_name in conversion_cols:
+                series_l[col_name] = conversion_cols[col_name]
+            else:
+                series_l[col_name] = df[col_name]
+        return pd.DataFrame(series_l)
+
+
 class TabularDataset:
     def __init__(self, path_or_df: Union[str, pd.DataFrame],
                  feature: Optional[Union[str, List[str]]] = None,
@@ -140,6 +168,7 @@ class TabularDataset:
             df = pd.read_pickle(path_or_df)
         else:
             df = path_or_df
+        df = convert_text_to_numeric_df(df)
         # Parse the feature + label columns
         feature_columns = feature
         label_columns = label

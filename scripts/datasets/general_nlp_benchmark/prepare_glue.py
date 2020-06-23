@@ -78,11 +78,13 @@ def read_tsv_glue(tsv_file, num_skip=1, keep_column_names=False):
                 dat = pd.to_numeric(df[col_name])
                 series_l.append(dat)
                 continue
-            except:
+            except ValueError:
                 pass
-        series_l.append(col_name)
-    new_df = pd.DataFrame(series_l, columns=column_names)
-    return df
+            finally:
+                pass
+        series_l.append(df[col_name])
+    new_df = pd.DataFrame({name: series for name, series in zip(df.columns, series_l)})
+    return new_df
 
 
 def read_jsonl_superglue(jsonl_file):

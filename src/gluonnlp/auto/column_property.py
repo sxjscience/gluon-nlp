@@ -60,7 +60,7 @@ class ColumnProperty(abc.ABC):
         ret += ')\n'
         return ret
 
-    def __str__(self):
+    def __repr__(self):
         return self.info()
 
 
@@ -163,9 +163,9 @@ class NumericalColumnProperty(ColumnProperty):
         val = column_data[idx]
         inferred_shape = np.array(val).shape
         if shape is not None:
-            shape == inferred_shape, 'Shape mismatch!. Expected shape={},' \
+            assert shape == inferred_shape, 'Shape mismatch!. Expected shape={},' \
                                      ' shape in the dataset is {}'.format(shape, inferred_shape)
-        self._shape = shape
+        self._shape = inferred_shape
 
     def transform(self, ele):
         return np.array(ele, dtype=np.float32)
