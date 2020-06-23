@@ -159,7 +159,7 @@ class TabularNLPDataset:
                 feature_columns = [feature_columns]
             if isinstance(label_columns, str):
                 label_columns = [label_columns]
-        all_columns = feature_columns
+        all_columns = feature_columns.copy()
         if label_columns is not None:
             all_columns.extend(label_columns)
         table = df[all_columns]
