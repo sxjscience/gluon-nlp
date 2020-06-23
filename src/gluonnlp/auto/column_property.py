@@ -206,7 +206,7 @@ class TextColumnProperty(ColumnProperty):
             # Determine the language
             lang_id = LanguageIdentifier(algo='langid')
             merged_string = ' '.join(column_data[:100].tolist())
-            lang = lang_id(merged_string)
+            lang, score = lang_id(merged_string)
             self._lang = lang
 
     @property
