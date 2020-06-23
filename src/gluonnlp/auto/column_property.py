@@ -1,4 +1,5 @@
 import abc
+import pprint
 import pandas as pd
 import numpy as np
 import multiprocessing as mp
@@ -9,6 +10,8 @@ from ..data.vocab import Vocab
 from ..data.filtering import LanguageIdentifier
 from ..utils.misc import num_mp_workers
 __all__ = ['CategoricalColumnProperty', 'TextColumnProperty', 'NumericalColumnProperty', 'EntityColumnProperty']
+
+
 
 
 class ColumnProperty(abc.ABC):
@@ -57,7 +60,7 @@ class ColumnProperty(abc.ABC):
         ret += ')\n'
         return ret
 
-    def __repr__(self):
+    def __str__(self):
         return self.info()
 
 

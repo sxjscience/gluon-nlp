@@ -115,8 +115,8 @@ def get_column_properties(df, column_names: Optional[List[str]] = None,
 
 class TabularNLPDataset:
     def __init__(self, path_or_df: Union[str, pd.DataFrame],
-                 feature_columns: Optional[Union[str, List[str]]] = None,
-                 label_columns: Union[str, List[str]] = None,
+                 feature: Optional[Union[str, List[str]]] = None,
+                 label: Union[str, List[str]] = None,
                  metadata: Optional[Union[str, Dict]] = None,
                  column_properties: Optional[collections.OrderedDict] = None):
         """
@@ -125,9 +125,9 @@ class TabularNLPDataset:
         ----------
         path_or_df
             The path or dataframe of the tabular dataset for NLP.
-        feature_columns
+        feature
             Name of the feature columns
-        label_columns
+        label
             Name of the label columns
         metadata
             The metadata object that describes the property of the columns in the dataset
@@ -140,11 +140,13 @@ class TabularNLPDataset:
         else:
             df = path_or_df
         # Parse the feature + label columns
+        feature_columns = feature
+        label_columns = label
         if feature_columns is None and label_columns is None:
             raise ValueError('Must specify either the "feature_columns" or "label_columns".')
-        if feature_columns is None and label_columns is not None:
-            if isinstance(label_columns, str):
-                label_columns = [label_columns]
+        if feature is None and label is not None:
+            if isinstance(label, str):
+                label_columns = [label]
             # Inference the feature columns based on label_columns
             feature_columns = [ele for ele in df.columns if ele not in label_columns]
         else:
