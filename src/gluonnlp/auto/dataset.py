@@ -60,6 +60,7 @@ def get_column_properties(df, column_names: Optional[List[str]] = None,
     -------
     column_properties
         Dictionary of column properties
+
     """
     column_properties = collections.OrderedDict()
     # Process all feature columns
@@ -165,7 +166,8 @@ class TabularDataset:
                 metadata = json.load(f)
         # Inference the column properties
         if column_properties is None:
-            column_properties = get_column_properties(table, metadata=metadata)
+            column_properties = get_column_properties(table,
+                                                      metadata=metadata)
         else:
             column_properties = collections.OrderedDict(
                 [(col_name, column_properties[col_name].parse_other(df[col_name]))

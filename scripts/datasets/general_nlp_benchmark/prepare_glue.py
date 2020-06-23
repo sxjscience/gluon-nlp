@@ -68,7 +68,21 @@ def read_tsv_glue(tsv_file, num_skip=1, keep_column_names=False):
                 nrows = len(elements)
             else:
                 assert nrows == len(elements)
-    return pd.DataFrame(out, columns=column_names)
+    df = pd.DataFrame(out, columns=column_names)
+    series_l = []
+    for col_name in df.columns:
+        idx = df[col_name].first_valid_index()
+        val = df[col_name][idx]
+        if isinstance(val, str):
+            try:
+                dat = pd.to_numeric(df[col_name])
+                series_l.append(dat)
+                continue
+            except:
+                pass
+        series_l.append(col_name)
+    new_df = pd.DataFrame(series_l, columns=column_names)
+    return df
 
 
 def read_jsonl_superglue(jsonl_file):
