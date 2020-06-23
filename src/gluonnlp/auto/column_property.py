@@ -42,7 +42,7 @@ class ColumnProperty(abc.ABC):
 
     @abc.abstractmethod
     def parse_other(self, column_data: pd.Series):
-        """Parse the test column data"""
+        """Parse another column data with the given property"""
         pass
 
     def info(self, additional_attributes=None):
