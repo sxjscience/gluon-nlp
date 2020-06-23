@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 import multiprocessing as mp
 from gluonnlp.auto import constants as _C
-from gluonnlp.auto.column_property import TextColumn, CategoricalColumn,\
-                                          NumericalColumn, EntityColumn
+from gluonnlp.auto.column_property import TextColumnProperty, CategoricalColumnProperty,\
+                                          NumericalColumnProperty, EntityColumnProperty
 from gluonnlp.utils.testing import autonlp_snli_testdata
 
 
@@ -13,7 +13,7 @@ test_snli_df, test_snli_metadata = autonlp_snli_testdata()
 
 
 def test_text_column_property():
-    text_column_property = TextColumn(test_snli_df['sentence1'])
+    text_column_property = TextColumnProperty(test_snli_df['sentence1'])
     print(text_column_property)  # Test printing
     assert text_column_property.type == _C.TEXT
     assert text_column_property.num_sample == 1000
@@ -31,7 +31,7 @@ def test_text_column_property():
 
 def test_categorical_column_property():
     test_snli_df2 = test_snli_df.iloc[10:20]
-    column_property = CategoricalColumn(test_snli_df['label'])
+    column_property = CategoricalColumnProperty(test_snli_df['label'])
     print(column_property)
     assert column_property.type == _C.CATEGORICAL
     assert column_property.categories == ['contradiction', 'entailment', 'neutral']
@@ -50,7 +50,7 @@ def test_categorical_column_property():
 
 def test_numerical_column_property():
     test_series = pd.Series(np.arange(0, 100, dtype=np.float32))
-    column_property = NumericalColumn(test_series)
+    column_property = NumericalColumnProperty(test_series)
     print(column_property)
     assert column_property.type == _C.NUMERICAL
     assert column_property.num_sample == 100
@@ -62,7 +62,7 @@ def test_numerical_column_property():
 def test_entity_column_property():
     # Test for Numeric Label
     sentence1_entity_numeric = test_snli_df['sentence1_entity_numeric']
-    entity_with_numeric_label = EntityColumn(
+    entity_with_numeric_label = EntityColumnProperty(
         sentence1_entity_numeric,
         parent=test_snli_metadata['sentence1_entity_numeric']['parent'])
     print(entity_with_numeric_label)
@@ -88,7 +88,7 @@ def test_entity_column_property():
 
     # Test for Categorical Label
     sentence1_entity_categorical = test_snli_df['sentence1_entity_categorical']
-    column_prop = EntityColumn(
+    column_prop = EntityColumnProperty(
         sentence1_entity_categorical,
         parent=test_snli_metadata['sentence1_entity_categorical']['parent'])
     print(column_prop)
@@ -120,7 +120,7 @@ def test_entity_column_property():
 
     # Test for Entity columns without label
     sentence2_entity = test_snli_df['sentence2_entity']
-    column_prop = EntityColumn(
+    column_prop = EntityColumnProperty(
         sentence2_entity,
         parent=test_snli_metadata['sentence2_entity']['parent'])
     print(column_prop)
