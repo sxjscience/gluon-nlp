@@ -113,7 +113,7 @@ def get_column_properties(df, column_names: Optional[List[str]] = None,
     return column_properties
 
 
-class TabularNLPDataset:
+class TabularDataset:
     def __init__(self, path_or_df: Union[str, pd.DataFrame],
                  feature: Optional[Union[str, List[str]]] = None,
                  label: Union[str, List[str]] = None,
