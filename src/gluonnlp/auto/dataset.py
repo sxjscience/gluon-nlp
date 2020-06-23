@@ -57,10 +57,10 @@ def get_column_properties(df, column_names: Optional[List[str]] = None,
 
     Returns
     -------
-    column_property_dict
+    column_properties
         Dictionary of column properties
     """
-    column_property_dict = collections.OrderedDict()
+    column_properties = collections.OrderedDict()
     # Process all feature columns
     if column_names is None:
         column_names = df.columns
@@ -68,17 +68,17 @@ def get_column_properties(df, column_names: Optional[List[str]] = None,
         if metadata is not None and col_name in metadata:
             col_type = metadata[col_name]['type']
             if col_type == _C.CATEGORICAL:
-                column_property_dict[col_name] = CategoricalColumnProperty(df[col_name])
+                column_properties[col_name] = CategoricalColumnProperty(df[col_name])
                 continue
             elif col_type == _C.TEXT:
-                column_property_dict[col_name] = TextColumnProperty(df[col_name])
+                column_properties[col_name] = TextColumnProperty(df[col_name])
                 continue
             elif col_type == _C.NUMERICAL:
-                column_property_dict[col_name] = NumericalColumnProperty(df[col_name])
+                column_properties[col_name] = NumericalColumnProperty(df[col_name])
                 continue
             elif col_type == _C.ENTITY:
                 parent = metadata[col_name]['parent']
-                column_property_dict[col_name] = EntityColumnProperty(column_data=df[col_name],
+                column_properties[col_name] = EntityColumnProperty(column_data=df[col_name],
                                                                       parent=parent)
                 continue
             else:
@@ -95,10 +95,10 @@ def get_column_properties(df, column_names: Optional[List[str]] = None,
             # Try to tell if the column is a text column / categorical column
             is_categorical = is_categorical_column(df[col_name])
             if is_categorical:
-                column_property_dict[col_name] = CategoricalColumnProperty(df[col_name])
+                column_properties[col_name] = CategoricalColumnProperty(df[col_name])
                 continue
         if isinstance(ele, str):
-            column_property_dict[col_name] = TextColumnProperty(df[col_name])
+            column_properties[col_name] = TextColumnProperty(df[col_name])
             continue
         # Raise error if we find an entity column
         if isinstance(ele, list):
@@ -108,8 +108,8 @@ def get_column_properties(df, column_names: Optional[List[str]] = None,
         elif isinstance(ele, dict):
             raise ValueError('An Entity column "{}" is found but no metadata is given.'
                              .format(col_name))
-        column_property_dict[col_name] = NumericalColumnProperty(df[col_name])
-    return column_property_dict
+        column_properties[col_name] = NumericalColumnProperty(df[col_name])
+    return column_properties
 
 
 class TabularNLPDataset:
@@ -117,9 +117,7 @@ class TabularNLPDataset:
                  feature_columns: Optional[Union[str, List[str]]] = None,
                  label_columns: Union[str, List[str]] = None,
                  metadata: Dict[str, str] = None,
-                 column_property_dict: Optional[collections.OrderedDict] = None,
-                 problem_type: Dict[str, str] = None,
-                 is_test: bool = False):
+                 column_properties: Optional[collections.OrderedDict] = None):
         """
 
         Parameters
@@ -132,15 +130,9 @@ class TabularNLPDataset:
             Name of the label columns
         metadata
             The metadata object that describes the property of the columns in the dataset
-        column_property_dict
+        column_properties
             The given column properties
-        problem_type
-            The type of the problem that we will solve for the label column.
-            If it is not given, we will infer the problem type from the input.
-        is_test
-            Whether it is a test dataset
         """
-        self._is_test = is_test
         if not isinstance(path_or_df, pd.DataFrame):
             # Assume pickle.
             df = pd.read_pickle(path_or_df)
@@ -165,67 +157,32 @@ class TabularNLPDataset:
         table = df[all_columns]
         if metadata is None:
             metadata = dict()
-        if problem_type is not None:
-            for col_name in label_columns:
-                label_problem_type = problem_type[col_name]
-                if label_problem_type == _C.CLASSIFICATION:
-                    if col_name not in metadata:
-                        metadata[col_name]['type'] = _C.CATEGORICAL
-                    else:
-                        assert metadata[col_name]['type'] == _C.CATEGORICAL
-                elif label_problem_type == _C.REGRESSION:
-                    if col_name not in metadata:
-                        metadata[col_name]['type'] = _C.NUMERICAL
-                    else:
-                        assert metadata[col_name]['type'] == _C.NUMERICAL
-                else:
-                    raise NotImplementedError('Unsupported problem_type="{}"'.format(problem_type))
         # Inference the column properties
-        if column_property_dict is None:
-            column_property_dict = get_column_properties(table, metadata=metadata)
+        if column_properties is None:
+            column_properties = get_column_properties(table, metadata=metadata)
+        else:
+            column_properties = collections.OrderedDict(
+                [(col_name, column_properties[col_name].parse_other(df[col_name]))
+                 for col_name in all_columns])
         # Ignore some unused columns
         feature_columns = [col_name for col_name in feature_columns
-                           if col_name in column_property_dict]
-        label_columns = [col_name for col_name in label_columns
-                         if col_name in column_property_dict]
-        self._column_property_dict = column_property_dict
+                           if col_name in column_properties]
+        if label_columns is not None:
+            label_columns = [col_name for col_name in label_columns
+                             if col_name in column_properties]
+        table = df[list(column_properties.keys())]
+        self._table = table
+        self._column_properties = column_properties
         self._feature_columns = feature_columns
         self._label_columns = label_columns
-        if label_columns is not None:
-            if isinstance(label_columns, str):
-                label_columns = [label_columns]
-            if problem_type is None:
-                problem_type = dict()
-                # Try to infer the problem type of each label
-                for col_name in label_columns:
-                    if self._column_property_dict[col_name].type == _C.CATEGORICAL:
-                        problem_type[col_name] = _C.CLASSIFICATION
-                    elif self._column_property_dict[col_name].type == _C.NUMERICAL:
-                        problem_type[col_name] = _C.REGRESSION
-                    elif self._column_property_dict[col_name].type == _C.ENTITY:
-                        raise NotImplementedError('Cannot does not support the label column '
-                                                  'to be entity column')
-                    else:
-                        raise NotImplementedError
-            self._problem_type = problem_type
-        else:
-            self._problem_type = None
-
-    @property
-    def problem_type(self):
-        return self._problem_type
-
-    @property
-    def is_test(self):
-        return self._is_test
 
     @property
     def table(self):
         return self._table
 
     @property
-    def column_property_dict(self):
-        return self._column_property_dict
+    def column_properties(self):
+        return self._column_properties
 
     @property
     def feature_columns(self):
@@ -235,13 +192,23 @@ class TabularNLPDataset:
     def label_columns(self):
         return self._label_columns
 
+    def infer_problem_type(self):
+        problem_type = dict()
+        for col_name in self.label_columns:
+            if self.column_properties[col_name].type == _C.CATEGORICAL:
+                problem_type[col_name] = _C.CLASSIFICATION
+            elif self.column_properties[col_name].type == _C.NUMERICAL:
+                problem_type[col_name] = _C.REGRESSION
+            else:
+                raise NotImplementedError('Cannot infer the problem type')
+        return problem_type
+
     def __repr__(self):
-        ret = 'Problem Type: {}, Is Test Dataset: {}\n'.format(self.problem_type, self.is_test)
-        ret += 'Feature Columns:\n\n'
+        ret = 'Feature Columns:\n\n'
         for col_name in self.feature_columns:
-            ret += '- ' + str(self.column_property_dict[col_name])
+            ret += '- ' + str(self.column_properties[col_name])
         ret += '\n'
         ret += 'Label Columns:\n\n'
         for col_name in self.label_columns:
-            ret += '- ' + str(self.column_property_dict[col_name])
+            ret += '- ' + str(self.column_properties[col_name])
         return ret
