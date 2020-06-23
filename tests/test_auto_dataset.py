@@ -14,8 +14,11 @@ def test_tabular_nlp_snli_dataset():
     assert dataset.column_properties['sentence2'].type == _C.TEXT
 
 
+
 def test_glue_datasets():
     glue_parser = prepare_glue.get_parser()
 
 
 def test_superglue_datasets():
+    glue_parser = prepare_glue.get_parser()
+
