@@ -3,6 +3,7 @@ import numpy as np
 import mxnet.gluon.data.batchify as bf
 from ..utils.preprocessing import get_trimmed_lengths, match_tokens_with_char_spans
 from . import constants as _C
+from .column_property import ColumnProperty
 
 
 class TextTokenIdsField:
@@ -77,7 +78,7 @@ class ArrayField:
 
 class TabularBERTPreprocessor:
     def __init__(self, tokenizer,
-                 column_property_dict: OrderedDict,
+                 column_properties: OrderedDict[ColumnProperty],
                  max_length: int,
                  merge_text: bool = True):
         """Preprocess the inputs to work with a pretrained model.
@@ -86,7 +87,7 @@ class TabularBERTPreprocessor:
         ----------
         tokenizer
             The tokenizer
-        column_property_dict
+        column_properties
             A dictionary that contains the column properties
         max_length
             The maximum length of the encoded token sequence.
@@ -96,14 +97,14 @@ class TabularBERTPreprocessor:
             [CLS] token_ids1 [SEP] token_ids2 [SEP] token_ids3 [SEP] token_ids4 [SEP] ...
         """
         self._tokenizer = tokenizer
-        self._column_property_dict = column_property_dict
+        self._column_properties = column_properties
         self._max_length = max_length
         self._merge_text = merge_text
         self._text_columns = []
         self._entity_columns = []
         self._categorical_columns = []
         self._numerical_columns = []
-        for col_id, (col_name, col_info) in enumerate(self._column_property_dict.items()):
+        for col_id, (col_name, col_info) in enumerate(self._column_properties.items()):
             if col_info.type == _C.TEXT:
                 self._text_columns.append((col_name, col_id))
             elif col_info.type == _C.ENTITY:
@@ -116,15 +117,15 @@ class TabularBERTPreprocessor:
                 raise NotImplementedError
         self._text_column_require_offsets = {col_name: False for col_name, _ in self.text_columns}
         for col_name, _ in self.categorical_columns:
-            self._text_column_require_offsets[self.column_property_dict[col_name].parent] = True
+            self._text_column_require_offsets[self.column_properties[col_name].parent] = True
 
     @property
     def max_length(self):
         return self._max_length
 
     @property
-    def column_property_dict(self):
-        return self._column_property_dict
+    def column_properties(self):
+        return self._column_properties
 
     @property
     def merge_text(self):
@@ -173,21 +174,21 @@ class TabularBERTPreprocessor:
                     out_types.append((_C.TEXT, dict()))
         if len(self.entity_columns) > 0:
             for col_name, _ in self.entity_columns:
-                parent = self.column_property_dict[col_name].parent
+                parent = self.column_properties[col_name].parent
                 if self.merge_text:
                     parent_idx = 0
                 else:
                     parent_idx = text_col_idx[parent]
                 out_types.extend((_C.ENTITY,
                                   {'parent_idx': parent_idx,
-                                   'col_prop': self.column_property_dict[col_name]}))
+                                   'col_prop': self.column_properties[col_name]}))
         if len(self.categorical_columns) > 0:
             out_types.extend([(_C.CATEGORICAL,
-                               {'col_prop': self.column_property_dict[col_name]})
+                               {'col_prop': self.column_properties[col_name]})
                               for col_name, _ in self.entity_columns])
         if len(self.numerical_columns) > 0:
             out_types.extend([(_C.NUMERICAL,
-                               {'col_prop': self.column_property_dict[col_name]})
+                               {'col_prop': self.column_properties[col_name]})
                               for col_name, _ in self.numerical_columns])
         return out_types
 
@@ -317,7 +318,7 @@ class TabularBERTPreprocessor:
         # Step 2: Transform all entity columns
         for col_name, col_id in self.entity_columns:
             entities = sample[col_id]
-            col_prop = self.column_property_dict[col_name]
+            col_prop = self.column_properties[col_name]
             char_offsets, transformed_labels = col_prop.transform(entities)
             # Get the offsets output by the tokenizer
             token_offsets = text_token_offsets[col_name]
@@ -331,12 +332,12 @@ class TabularBERTPreprocessor:
 
         # Step 3: Transform all categorical columns
         for col_name, col_id in self.categorical_columns:
-            col_prop = self.column_property_dict[col_name]
+            col_prop = self.column_properties[col_name]
             transformed_labels = col_prop.transform(sample[col_id])
             features.append(ArrayField(transformed_labels))
 
         # Step 4: Transform all numerical columns
         for col_name, col_id in self.numerical_columns:
-            col_prop = self.column_property_dict[col_name]
+            col_prop = self.column_properties[col_name]
             features.append(ArrayField(col_prop.transform(sample[col_id])))
         return features

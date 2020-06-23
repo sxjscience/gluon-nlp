@@ -509,7 +509,7 @@ class EntityColumnProperty(ColumnProperty):
                                     label_vocab=self._label_vocab)
 
     def info(self):
-        additional_attributes = [('parent', self._parent),
+        additional_attributes = [('parent', '"{}"'.format(self._parent)),
                                  ('#total entity', self.num_total_entity),
                                  ('num entity per sample',
                                   '{:.2f}'.format(self.avg_entity_per_sample)),
