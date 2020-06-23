@@ -359,6 +359,7 @@ class EntityColumnProperty(ColumnProperty):
                     self._label_type = label_type
         self._num_total_entity = len(all_span_lengths)
         self._avg_entity_per_sample = len(all_span_lengths) / self.num_valid_sample
+        self._avg_span_length = np.mean(all_span_lengths).item()
         if self._label_type == _C.CATEGORICAL:
             if self._label_vocab is None:
                 keys = sorted(categorical_label_counter.keys())
@@ -490,6 +491,10 @@ class EntityColumnProperty(ColumnProperty):
         return self._avg_entity_per_sample
 
     @property
+    def avg_span_length(self):
+        return self._avg_span_length
+
+    @property
     def num_total_entity(self):
         return self._num_total_entity
 
@@ -504,7 +509,8 @@ class EntityColumnProperty(ColumnProperty):
         additional_attributes = [('parent', self._parent),
                                  ('#total entity', self.num_total_entity),
                                  ('num entity per sample',
-                                  '{:.2f}'.format(self.avg_entity_per_sample))]
+                                  '{:.2f}'.format(self.avg_entity_per_sample)),
+                                 ('avg span length', '{:.2f}'.format(self._avg_span_length))]
         if self.label_type == _C.CATEGORICAL:
             additional_attributes.append(('num categories', len(self.label_keys)))
             additional_attributes.append(('max/min freq',

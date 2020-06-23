@@ -1,6 +1,7 @@
 import collections
 import warnings
 import pandas as pd
+import json
 from . import constants as _C
 from .column_property import CategoricalColumnProperty, EntityColumnProperty,\
                              TextColumnProperty, NumericalColumnProperty
@@ -116,7 +117,7 @@ class TabularNLPDataset:
     def __init__(self, path_or_df: Union[str, pd.DataFrame],
                  feature_columns: Optional[Union[str, List[str]]] = None,
                  label_columns: Union[str, List[str]] = None,
-                 metadata: Dict[str, str] = None,
+                 metadata: Optional[Union[str, Dict]] = None,
                  column_properties: Optional[collections.OrderedDict] = None):
         """
 
@@ -157,6 +158,9 @@ class TabularNLPDataset:
         table = df[all_columns]
         if metadata is None:
             metadata = dict()
+        elif isinstance(metadata, str):
+            with open(metadata, 'r') as f:
+                metadata = json.load(f)
         # Inference the column properties
         if column_properties is None:
             column_properties = get_column_properties(table, metadata=metadata)
