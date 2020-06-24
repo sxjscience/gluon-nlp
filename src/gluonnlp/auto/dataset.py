@@ -173,8 +173,9 @@ class TabularDataset:
         feature_columns = feature
         label_columns = label
         if feature_columns is None and label_columns is None:
-            raise ValueError('Must specify either the "feature_columns" or "label_columns".')
-        if feature is None and label is not None:
+            feature_columns = df.columns
+            label_columns = None
+        elif feature_columns is None and label_columns is not None:
             if isinstance(label, str):
                 label_columns = [label]
             # Inference the feature columns based on label_columns
