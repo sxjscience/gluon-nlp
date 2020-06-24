@@ -122,7 +122,7 @@ class TabularBERTPreprocessor:
             else:
                 raise NotImplementedError
         self._text_column_require_offsets = {col_name: False for col_name in self.text_columns}
-        for col_name, _ in self._entity_columns:
+        for col_name in self._entity_columns:
             self._text_column_require_offsets[self.column_properties[col_name].parent] = True
 
     @property
@@ -175,11 +175,11 @@ class TabularBERTPreprocessor:
             if self.merge_text:
                 out_types.append((_C.TEXT, dict()))
             else:
-                for i, (col_name, _) in enumerate(self.text_columns):
+                for i, col_name in enumerate(self.text_columns):
                     text_col_idx[col_name] = i
                     out_types.append((_C.TEXT, dict()))
         if len(self.entity_columns) > 0:
-            for col_name, _ in self.entity_columns:
+            for col_name in self.entity_columns:
                 parent = self.column_properties[col_name].parent
                 if self.merge_text:
                     parent_idx = 0
@@ -191,11 +191,11 @@ class TabularBERTPreprocessor:
         if len(self.categorical_columns) > 0:
             out_types.extend([(_C.CATEGORICAL,
                                {'col_prop': self.column_properties[col_name]})
-                              for col_name, _ in self.entity_columns])
+                              for col_name in self.entity_columns])
         if len(self.numerical_columns) > 0:
             out_types.extend([(_C.NUMERICAL,
                                {'col_prop': self.column_properties[col_name]})
-                              for col_name, _ in self.numerical_columns])
+                              for col_name in self.numerical_columns])
         return out_types
 
     def __call__(self, sample):
