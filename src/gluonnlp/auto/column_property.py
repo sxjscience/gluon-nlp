@@ -63,7 +63,7 @@ class ColumnProperty(abc.ABC):
         ret += ')\n'
         return ret
 
-    def __repr__(self):
+    def __str__(self):
         return self.info()
 
 

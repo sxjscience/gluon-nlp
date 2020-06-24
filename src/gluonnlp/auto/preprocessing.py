@@ -178,7 +178,7 @@ class TabularBERTPreprocessor:
     def numerical_columns(self):
         return self._numerical_columns
 
-    def out_feature_types(self):
+    def filed_types(self):
         """Get the types of the output features after this transformation
 
         TEXT --> (token_ids, valid_length)
@@ -212,7 +212,7 @@ class TabularBERTPreprocessor:
         if len(self.categorical_columns) > 0:
             out_types.extend([(_C.CATEGORICAL,
                                {'col_prop': self.column_properties[col_name]})
-                              for col_name in self.entity_columns])
+                              for col_name in self.categorical_columns])
         if len(self.numerical_columns) > 0:
             out_types.extend([(_C.NUMERICAL,
                                {'col_prop': self.column_properties[col_name]})
