@@ -16,8 +16,8 @@ into a text-to-text problem. However, it is difficult to convert tasks like sent
 match, or named-entity recognition into text-to-text, because they involve real-values or text 
 spans that are difficult to be encoded as raw text data.
 
-In GluonNLP, we propose a unified way to tackle these NLP problems. We convert these datasets 
-as tables. Each column in the table will be 1) raw text, 2) entity/list of entities associated with the 
+In GluonNLP, we convert these datasets as tables. 
+Each column in the table will be 1) raw text, 2) entity/list of entities associated with the 
 raw text, 3) numerical values or a list of numerical values. 
 In addition, we keep a metadata object that describes 1) the relationship among columns, 
 2) certain properties of the columns.
