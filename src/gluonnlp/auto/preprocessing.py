@@ -48,7 +48,7 @@ class TextTokenIdsField:
             return batch_token_ids, batch_segment_ids, batch_valid_length
         return batchify_fn
 
-    def __repr__(self):
+    def __str__(self):
         ret = '{}(\n'.format(self.__class__.__name__)
         ret += 'token_ids={}\n'.format(self.token_ids)
         ret += 'length={}\n'.format(self.token_ids)
@@ -74,7 +74,7 @@ class EntityField:
     def batchify(self):
         raise NotImplementedError
 
-    def __repr__(self):
+    def __str__(self):
         ret = '{}(\n'.format(self.__class__.__name__)
         ret += 'data={}\n'.format(self.data)
         ret += 'label={}\n'.format(None if self.label is None else self.label)
@@ -93,7 +93,7 @@ class ArrayField:
             return stack_batchify([ele.data for ele in samples])
         return batchify_fn
 
-    def __repr__(self):
+    def __str__(self):
         ret = '{}(\n'.format(self.__class__.__name__)
         ret += 'data={}\n'.format(self.data)
         ret += ')\n'
@@ -206,7 +206,7 @@ class TabularBERTPreprocessor:
                     parent_idx = 0
                 else:
                     parent_idx = text_col_idx[parent]
-                out_types.extend((_C.ENTITY,
+                out_types.append((_C.ENTITY,
                                   {'parent_idx': parent_idx,
                                    'col_prop': self.column_properties[col_name]}))
         if len(self.categorical_columns) > 0:

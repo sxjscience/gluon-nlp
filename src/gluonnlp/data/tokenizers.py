@@ -17,8 +17,8 @@
 """Tokenizers."""
 __all__ = ['WhitespaceTokenizer', 'SpacyTokenizer', 'JiebaTokenizer', 'MosesTokenizer',
            'SubwordNMTTokenizer', 'YTTMTokenizer', 'SentencepieceTokenizer',
-           'HuggingFaceBPETokenizer', 'HuggingFaceByteBPETokenizer', 'HuggingFaceWordPieceTokenizer',
-           'create', 'create_with_json', 'list_all']
+           'HuggingFaceBPETokenizer', 'HuggingFaceByteBPETokenizer',
+           'HuggingFaceWordPieceTokenizer', 'create', 'create_with_json', 'list_all']
 
 from typing import List, Tuple, Union, Optional
 import os
