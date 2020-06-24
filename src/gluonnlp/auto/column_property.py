@@ -1,15 +1,16 @@
 import abc
-import pprint
 import pandas as pd
 import numpy as np
-import multiprocessing as mp
 import collections
 from typing import List, Optional, Union, Tuple, Hashable
 from . import constants as _C
 from ..data.vocab import Vocab
 from ..data.filtering import LanguageIdentifier
-from ..utils.misc import num_mp_workers
-__all__ = ['CategoricalColumnProperty', 'TextColumnProperty', 'NumericalColumnProperty', 'EntityColumnProperty']
+__all__ = ['CategoricalColumnProperty', 'TextColumnProperty', 'NumericalColumnProperty',
+           'EntityColumnProperty']
+
+
+lang_id = LanguageIdentifier()
 
 
 class ColumnProperty(abc.ABC):
@@ -204,7 +205,6 @@ class TextColumnProperty(ColumnProperty):
             self._lang = lang
         else:
             # Determine the language
-            lang_id = LanguageIdentifier()
             merged_string = ' '.join(column_data[:100].tolist())
             lang, score = lang_id(merged_string)
             self._lang = lang
