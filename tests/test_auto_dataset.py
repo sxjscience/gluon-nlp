@@ -97,7 +97,7 @@ def test_superglue_datasets(task_name, feature_columns, label_columns):
         elif label_columns == 'score':
             expected_label_type = _C.NUMERICAL
         elif label_columns == 'answers':
-            expected_label_type = _C.TEXT
+            expected_label_type = _C.ENTITY
         if os.path.exists(os.path.join(root, task_name, 'metadata.json')):
             metadata_path = os.path.join(root, task_name, 'metadata.json')
         else:
