@@ -284,7 +284,7 @@ class TabularBERTPreprocessor:
                 text_token_ids[col_name] = token_ids
                 if self.text_column_require_offsets[col_name]:
                     text_token_offsets[col_name] = token_offsets
-            lengths = [len(text_token_ids[col_name]) for col_name, _ in self.text_columns]
+            lengths = [len(text_token_ids[col_name]) for col_name in self.text_columns]
             if self.merge_text:
                 # We will merge the text tokens by
                 # [CLS] token_ids1 [SEP] token_ids2 [SEP]
@@ -295,8 +295,8 @@ class TabularBERTPreprocessor:
                 encoded_token_ids = [np.array([self._tokenizer.vocab.cls_id])]
                 segment_ids = [np.array([0])]
                 sentence_start_in_merged = dict()
-                for idx, (trim_length, (col_name, _)) in enumerate(zip(trimmed_lengths,
-                                                                       self.text_columns)):
+                for idx, (trim_length, col_name) in enumerate(zip(trimmed_lengths,
+                                                                  self.text_columns)):
                     sentence_start_in_merged[col_name] = len(encoded_token_ids)
                     encoded_token_ids.append(text_token_ids[col_name][:trim_length])
                     segment_ids.append(np.full_like(encoded_token_ids[-1], idx))
@@ -312,7 +312,7 @@ class TabularBERTPreprocessor:
                 trimmed_lengths = get_trimmed_lengths(lengths,
                                                       max_length=self.max_length - 2,
                                                       do_merge=False)
-                for trim_length, (col_name, _) in zip(trimmed_lengths, self.text_columns):
+                for trim_length, col_name in zip(trimmed_lengths, self.text_columns):
                     encoded_token_ids = np.concatenate(np.array([self._tokenizer.vocab.cls_id]),
                                                        text_token_ids[col_name][:trim_length],
                                                        np.array([self._tokenizer.vocab.sep_id]))
@@ -324,13 +324,14 @@ class TabularBERTPreprocessor:
             col_idx = self._col_idx_map[col_name]
             entities = sample[col_idx]
             col_prop = self.column_properties[col_name]
+            parent_name = col_prop.parent
             char_offsets, transformed_labels = col_prop.transform(entities)
             # Get the offsets output by the tokenizer
-            token_offsets = text_token_offsets[col_prop.parent]
+            token_offsets = text_token_offsets[parent_name]
             entity_token_offsets = match_tokens_with_char_spans(token_offsets=token_offsets,
                                                                 spans=char_offsets)
             if self.merge_text:
-                entity_token_offsets += sentence_start_in_merged[col_name]
+                entity_token_offsets += sentence_start_in_merged[parent_name]
             else:
                 entity_token_offsets += 1  # Add the offset w.r.t the cls token.
             fields.append(EntityField(entity_token_offsets, transformed_labels))
