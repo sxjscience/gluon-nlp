@@ -1,11 +1,13 @@
 import abc
 import pandas as pd
+import multiprocessing as mp
 import numpy as np
 import collections
 from typing import List, Optional, Union, Tuple, Hashable
 from . import constants as _C
 from ..data.vocab import Vocab
 from ..data.filtering import LanguageIdentifier
+from ..utils.misc import num_mp_workers
 __all__ = ['CategoricalColumnProperty', 'TextColumnProperty', 'NumericalColumnProperty',
            'EntityColumnProperty']
 
@@ -136,7 +138,7 @@ class CategoricalColumnProperty(ColumnProperty):
 
     def parse_other(self, column_data: pd.Series):
         return CategoricalColumnProperty(column_data=column_data,
-                                     categories=self.categories)
+                                         categories=self.categories)
 
     def info(self):
         return super().info(
@@ -205,9 +207,11 @@ class TextColumnProperty(ColumnProperty):
             self._lang = lang
         else:
             # Determine the language
-            merged_string = ' '.join(column_data[:100].tolist())
-            lang, score = lang_id(merged_string)
-            self._lang = lang
+            sel_data = column_data[:100].tolist()
+            with mp.Pool(num_mp_workers()) as pool:
+                infer_lang_scores = pool.map(lang_id, sel_data)
+            uniq_lang, counts = np.unique([dat[0] for dat in infer_lang_scores], return_counts=True)
+            self._lang = uniq_lang[counts.argmax()]
 
     @property
     def num_samples(self):
