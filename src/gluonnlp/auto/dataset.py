@@ -36,7 +36,7 @@ def is_categorical_column(data: pd.Series,
     """
     threshold = min(int(len(data) * ratio), threshold)
     sample_set = set()
-    for sample in data:
+    for idx, sample in data.items():
         sample_set.add(sample)
         if len(sample_set) > threshold:
             return False
