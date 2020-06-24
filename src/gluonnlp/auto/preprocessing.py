@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from typing import Dict
 import numpy as np
 import mxnet.gluon.data.batchify as bf
 from ..utils.preprocessing import get_trimmed_lengths, match_tokens_with_char_spans
@@ -80,7 +81,7 @@ class ArrayField:
 
 class TabularBERTPreprocessor:
     def __init__(self, tokenizer,
-                 column_properties: OrderedDict[ColumnProperty],
+                 column_properties: Dict[str, ColumnProperty],
                  max_length: int,
                  merge_text: bool = True):
         """Preprocess the inputs to work with a pretrained model.
@@ -106,19 +107,22 @@ class TabularBERTPreprocessor:
         self._entity_columns = []
         self._categorical_columns = []
         self._numerical_columns = []
-        for col_id, (col_name, col_info) in enumerate(self._column_properties.items()):
+        self._col_idx_map = {col_name: col_id
+                             for col_id, col_name in enumerate(self._column_properties.keys())}
+        # TODO(sxjscience) Refactor the implementation
+        for col_name, col_info in self._column_properties.items():
             if col_info.type == _C.TEXT:
-                self._text_columns.append((col_name, col_id))
+                self._text_columns.append(col_name)
             elif col_info.type == _C.ENTITY:
-                self._entity_columns.append((col_name, col_id))
+                self._entity_columns.append(col_name)
             elif col_info.type == _C.CATEGORICAL:
-                self._categorical_columns.append((col_name, col_id))
+                self._categorical_columns.append(col_name)
             elif col_info.type == _C.NUMERICAL:
-                self._numerical_columns.append((col_name, col_id))
+                self._numerical_columns.append(col_name)
             else:
                 raise NotImplementedError
-        self._text_column_require_offsets = {col_name: False for col_name, _ in self.text_columns}
-        for col_name, _ in self.categorical_columns:
+        self._text_column_require_offsets = {col_name: False for col_name in self.text_columns}
+        for col_name, _ in self._entity_columns:
             self._text_column_require_offsets[self.column_properties[col_name].parent] = True
 
     @property
@@ -195,21 +199,21 @@ class TabularBERTPreprocessor:
         return out_types
 
     def __call__(self, sample):
-        """Transform a sample into a list of features.
+        """Transform a sample into a list of fields.
 
         We organize and represent the features in the following format:
 
-        - Text features
+        - Text fields
             We transform text into a sequence of token_ids.
             If there are multiple text fields, we have the following options
             1) merge_text = True
                 We will concatenate these text fields and inserting CLS, SEP ids, i.e.
-                [CLS] text_ids1 [SEP] text_ids2 [SEP] text_ids3, ...
+                [CLS] text_ids1 [SEP] text_ids2 [SEP]
             2) merge_text = False
                 We will transform each text field separately:
                 [CLS] text_ids1 [SEP], [CLS] text_ids2 [SEP], ...
             For empty text / missing text data, we will just convert it to [CLS] [SEP]
-        - Entity features
+        - Entity fields
             The raw entities are stored as character-level start and end offsets.
             After the preprocessing step, we will store them as the token-level
             start + end. Different from the raw character-level start + end offsets, the
@@ -217,10 +221,10 @@ class TabularBERTPreprocessor:
             - [(token_level_start, token_level_end, entity_label_id)]
             or
             - [(token_level_start, token_level_end)]
-        - Categorical features
+        - Categorical fields
             We transform the categorical features to its ids.
             We indicate the missing value with a special flag.
-        - Numerical features
+        - Numerical fields
             We keep the numerical features and indicate the missing value
             with a special flag.
 
@@ -250,32 +254,30 @@ class TabularBERTPreprocessor:
 
             - NUMERICAL
                 The numerical feature. Will be a numpy array
-        labels
-            The labels
         """
-        features = []
-        labels = []
+        fields = []
         # Step 1: Get the features of all text columns
         sentence_start_in_merged = None  # The start of each sentence in the merged text
         text_token_ids = OrderedDict()
         text_token_offsets = OrderedDict()
         if len(self.text_columns) > 0:
-            for col_name, col_id in self.text_columns:
-                if isinstance(sample[col_id], str):
+            for col_name in self.text_columns:
+                col_idx = self._col_idx_map[col_name]
+                if isinstance(sample[col_idx], str):
                     if self.text_column_require_offsets[col_name]:
                         token_ids, token_offsets =\
-                            self._tokenizer.encode_with_offsets(sample[col_id], int)
+                            self._tokenizer.encode_with_offsets(sample[col_idx], int)
                         token_ids = np.array(token_ids)
                         token_offsets = np.array(token_offsets)
                     else:
-                        token_ids = self._tokenizer.encode(sample[col_id], int)
+                        token_ids = self._tokenizer.encode(sample[col_idx], int)
                         token_ids = np.array(token_ids)
-                elif isinstance(sample[col_id], np.ndarray):
+                elif isinstance(sample[col_idx], np.ndarray):
                     if self.text_column_require_offsets[col_name]:
                         raise ValueError('Must get the offsets of all text tokens!')
-                    token_ids = sample[col_id]
-                elif isinstance(sample[col_id], tuple):
-                    token_ids, token_offsets = sample[col_id]
+                    token_ids = sample[col_idx]
+                elif isinstance(sample[col_idx], tuple):
+                    token_ids, token_offsets = sample[col_idx]
                 else:
                     raise NotImplementedError('The input format of the text column '
                                               'cannot be understood!')
@@ -290,7 +292,7 @@ class TabularBERTPreprocessor:
                 trimmed_lengths = get_trimmed_lengths(lengths,
                                                       max_length=self.max_length - len(lengths) - 1,
                                                       do_merge=True)
-                encoded_token_ids = [np.array([self._tokenizer.cls_id])]
+                encoded_token_ids = [np.array([self._tokenizer.vocab.cls_id])]
                 segment_ids = [np.array([0])]
                 sentence_start_in_merged = dict()
                 for idx, (trim_length, (col_name, _)) in enumerate(zip(trimmed_lengths,
@@ -298,11 +300,11 @@ class TabularBERTPreprocessor:
                     sentence_start_in_merged[col_name] = len(encoded_token_ids)
                     encoded_token_ids.append(text_token_ids[col_name][:trim_length])
                     segment_ids.append(np.full_like(encoded_token_ids[-1], idx))
-                    encoded_token_ids.append(np.array([self._tokenizer.sep_id]))
+                    encoded_token_ids.append(np.array([self._tokenizer.vocab.sep_id]))
                     segment_ids.append(np.array([idx]))
                 encoded_token_ids = np.concatenate(encoded_token_ids).astype(np.int32)
                 segment_ids = np.concatenate(segment_ids).astype(np.int32)
-                features.append(TextTokenIdsField(encoded_token_ids, segment_ids))
+                fields.append(TextTokenIdsField(encoded_token_ids, segment_ids))
             else:
                 # We encode each sentence independently
                 # [CLS] token_ids1 [SEP], [CLS] token_ids2 [SEP]
@@ -311,35 +313,38 @@ class TabularBERTPreprocessor:
                                                       max_length=self.max_length - 2,
                                                       do_merge=False)
                 for trim_length, (col_name, _) in zip(trimmed_lengths, self.text_columns):
-                    encoded_token_ids = np.concatenate(np.array([self._tokenizer.cls_id]),
+                    encoded_token_ids = np.concatenate(np.array([self._tokenizer.vocab.cls_id]),
                                                        text_token_ids[col_name][:trim_length],
-                                                       np.array([self._tokenizer.sep_id]))
-                    features.append(TextTokenIdsField(encoded_token_ids.astype(np.int32),
-                                                      np.zeros_like(encoded_token_ids,
-                                                                    dtype=np.int32)))
+                                                       np.array([self._tokenizer.vocab.sep_id]))
+                    fields.append(TextTokenIdsField(encoded_token_ids.astype(np.int32),
+                                                    np.zeros_like(encoded_token_ids,
+                                                                  dtype=np.int32)))
         # Step 2: Transform all entity columns
-        for col_name, col_id in self.entity_columns:
-            entities = sample[col_id]
+        for col_name in self.entity_columns:
+            col_idx = self._col_idx_map[col_name]
+            entities = sample[col_idx]
             col_prop = self.column_properties[col_name]
             char_offsets, transformed_labels = col_prop.transform(entities)
             # Get the offsets output by the tokenizer
-            token_offsets = text_token_offsets[col_name]
+            token_offsets = text_token_offsets[col_prop.parent]
             entity_token_offsets = match_tokens_with_char_spans(token_offsets=token_offsets,
                                                                 spans=char_offsets)
             if self.merge_text:
                 entity_token_offsets += sentence_start_in_merged[col_name]
             else:
                 entity_token_offsets += 1  # Add the offset w.r.t the cls token.
-            features.append(EntityField(entity_token_offsets, transformed_labels))
+            fields.append(EntityField(entity_token_offsets, transformed_labels))
 
         # Step 3: Transform all categorical columns
-        for col_name, col_id in self.categorical_columns:
+        for col_name in self.categorical_columns:
+            col_idx = self._col_idx_map[col_name]
             col_prop = self.column_properties[col_name]
-            transformed_labels = col_prop.transform(sample[col_id])
-            features.append(ArrayField(transformed_labels))
+            transformed_labels = col_prop.transform(sample[col_idx])
+            fields.append(ArrayField(transformed_labels))
 
         # Step 4: Transform all numerical columns
-        for col_name, col_id in self.numerical_columns:
+        for col_name in self.numerical_columns:
+            col_idx = self._col_idx_map[col_name]
             col_prop = self.column_properties[col_name]
-            features.append(ArrayField(col_prop.transform(sample[col_id])))
-        return features
+            fields.append(ArrayField(col_prop.transform(sample[col_idx])))
+        return fields
