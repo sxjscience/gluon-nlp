@@ -10,7 +10,7 @@ from typing import List, Optional, Union, Dict
 
 
 def is_categorical_column(data: pd.Series,
-                          threshold: int = 1000,
+                          threshold: int = 100,
                           ratio: float = 0.1) -> bool:
     """Check whether the column is a categorical column.
 

@@ -89,10 +89,10 @@ nlp_data prepare_glue --benchmark superglue
 | ReCoRD   | 101k    | 10k  | 10k         | source, text, entities, query, **answers** | QA           | F1/EM                        | news                            |
 | RTE      | 2.5k    | 278  | 3k          | premise, hypothesis, **label**  | NLI          | acc.                         | news, Wikipedia                 |
 | WiC      | 6k    | 638  | 1.4k          | sentence1, sentence2, entities1, entities2, **label**  | WSD          | acc.                         | WordNet, VerbNet, Wiktionary    |
-| WSC      | 554     | 104  | 146         | text, entities, **label**  | coref.       | acc.                         | fiction books                   |
+| WSC      | 554     | 104  | 146         | text, noun, pronoun, **label**  | coref.       | acc.                         | fiction books                   |
 
 *Note that for MultiRC, we enumerated all combinations of (passage, question, answer) triplets in 
-the dataset and the number of samples in the expanded format is recorded inside parenthesis.
+the dataset. The number of samples in the expanded format is recorded inside parenthesis.
 
 Similar to GLUE, SuperGLUE has two diagnostic tasks to analyze the system performance 
 on a broad range of linguistic phenomena. For more details, 

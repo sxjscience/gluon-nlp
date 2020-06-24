@@ -41,7 +41,7 @@ SUPERGLUE_TASKS_FOR_TEST = \
      ('record', ['source', 'text', 'entities', 'query'], 'answers'),
      ('rte', ['premise', 'hypothesis'], 'label'),
      ('wic', ['sentence1', 'sentence2', 'entities1', 'entities2'], 'label'),
-     ('wsc', ['text', 'entities'], 'label')]
+     ('wsc', ['text', 'noun', 'pronoun'], 'label')]
 
 
 @pytest.mark.parametrize('task_name, feature_columns, label_columns', GLUE_TASKS_FOR_TEST)
