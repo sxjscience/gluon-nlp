@@ -19,11 +19,11 @@ def test_glue_datasets(tmp_path):
     glue_parser = prepare_glue.get_parser()
     with tempfile.TemporaryDirectory() as root:
         args = glue_parser.parse_args(['--benchmark', 'glue',
-                                       '--cache-path', tmp_path,
+                                       '--cache-path', str(tmp_path),
                                        '--data_dir', root])
         prepare_glue.main(args)
         tasks = [('cola', 'sentence', 'label'),
-                 ('sst2', 'sentence', 'label'),
+                 ('sst', 'sentence', 'label'),
                  ('mrpc', ['sentence1', 'sentence2'], 'label'),
                  ('sts', ['sentence1', 'sentence2'], 'score'),
                  ('qqp', ['sentence1', 'sentence2'], 'label'),
@@ -31,8 +31,7 @@ def test_glue_datasets(tmp_path):
                  ('qnli', ['question', 'sentence'], 'label'),
                  ('rte', ['sentence1', 'sentence2'], 'label'),
                  ('wnli', ['sentence1', 'sentence2'], 'label'),
-                 ('snli', ['sentence1', 'sentence2'], 'label'),
-                 ('rte_diagnostic', None, None)]
+                 ('snli', ['sentence1', 'sentence2'], 'label')]
         for dir_name, feature_columns, label_columns in tasks:
             if label_columns == 'label':
                 expected_label_type = _C.CATEGORICAL
@@ -65,7 +64,7 @@ def test_superglue_datasets(tmp_path):
     glue_parser = prepare_glue.get_parser()
     with tempfile.TemporaryDirectory() as root:
         args = glue_parser.parse_args(['--benchmark', 'superglue',
-                                       '--cache-path', tmp_path,
+                                       '--cache-path', str(tmp_path),
                                        '--data_dir', os.path.join(root, 'superglue')])
         prepare_glue.main(args)
         tasks = [('boolq', ['passage', 'question'], 'label'),
@@ -75,9 +74,7 @@ def test_superglue_datasets(tmp_path):
                  ('record', ['source', 'text', 'entities', 'query'], 'answers'),
                  ('rte', ['premise', 'hypothesis'], 'label'),
                  ('wic', ['sentence1', 'sentence2', 'entities1', 'entities2'], 'label'),
-                 ('wsc', ['text', 'entities'], 'label'),
-                 ('AX-b', None, 'label'),
-                 ('AX-g', None, 'label')]
+                 ('wsc', ['text', 'entities'], 'label')]
         for dir_name, feature_columns, label_columns in tasks:
             if label_columns == 'label':
                 expected_label_type = _C.CATEGORICAL
