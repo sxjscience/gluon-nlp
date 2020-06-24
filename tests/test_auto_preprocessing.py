@@ -8,5 +8,5 @@ test_snli_df, test_snli_metadata = autonlp_snli_testdata()
 def test_tabular_bert_preprocessor():
     cfg, tokenizer, _, _ = get_pretrained_bert()
     preprocessor = TabularBERTPreprocessor(tokenizer=tokenizer,
-                                           column_property_dict=)
+                                           column_properties=)
 

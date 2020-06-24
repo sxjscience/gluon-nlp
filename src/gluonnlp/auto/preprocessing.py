@@ -25,7 +25,7 @@ class TextTokenIdsField:
             self.segment_ids = segment_ids
 
     def batchify(self, round_to=None):
-        """Get the batchify function
+        """Get the batchify function. The batchify function takes a list of samples.
 
         Parameters
         ----------
@@ -39,6 +39,7 @@ class TextTokenIdsField:
         """
         pad_batchify = bf.Pad(round_to=round_to)
         stack_batchify = bf.Stack()
+
         def batchify_fn(data):
             batch_token_ids = pad_batchify([ele.token_ids for ele in data])
             batch_segment_ids = pad_batchify([ele.segment_ids for ele in data])
@@ -71,6 +72,7 @@ class ArrayField:
 
     def batchify(self):
         stack_batchify = bf.Stack()
+
         def batchify_fn(samples):
             return stack_batchify([ele.data for ele in samples])
         return batchify_fn
