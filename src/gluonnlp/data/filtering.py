@@ -235,6 +235,7 @@ class LanguageIdentifier:
             The score of the prediction
         """
         if self._use_fasttext:
+            corpus = corpus.replace('\n', '')
             labels, scores = self._model.predict(corpus)
             label = labels[0].replace("__label__", "")
             return label, scores[0]
