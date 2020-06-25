@@ -37,7 +37,7 @@ from mxnet.gluon import HybridBlock, nn
 
 from ..op import select_vectors_by_position
 from ..base import get_model_zoo_home_dir, get_repo_model_zoo_url, get_model_zoo_checksum_dir
-from ..layers import InitializerType, PositionwiseFFN, PositionalEmbedding, get_layer_norm, get_activation
+from ..layers import InitializerType, PositionwiseFFN, PositionalEmbedding, get_norm_layer, get_activation
 from ..initializer import TruncNorm
 from ..utils.config import CfgNode as CN
 from ..utils.misc import load_checksum_stats, download
@@ -132,7 +132,7 @@ class MobileBertEncoderLayer(HybridBlock):
                                                    bias_initializer=bias_initializer,
                                                    dtype=self._dtype,
                                                    prefix='in_bottleneck_proj_')
-                self.in_bottleneck_ln = get_layer_norm(normalization=normalization,
+                self.in_bottleneck_ln = get_norm_layer(normalization=normalization,
                                                        in_channels=real_units,
                                                        epsilon=layer_norm_eps,
                                                        prefix='in_bottleneck_ln_')
@@ -143,7 +143,7 @@ class MobileBertEncoderLayer(HybridBlock):
                                                     bias_initializer=bias_initializer,
                                                     dtype=self._dtype,
                                                     prefix='out_bottleneck_proj_')
-                self.out_bottleneck_ln = get_layer_norm(normalization=normalization,
+                self.out_bottleneck_ln = get_norm_layer(normalization=normalization,
                                                         in_channels=units,
                                                         epsilon=layer_norm_eps,
                                                         prefix='out_bottleneck_ln_')
@@ -156,7 +156,7 @@ class MobileBertEncoderLayer(HybridBlock):
                                               bias_initializer=bias_initializer,
                                               dtype=self._dtype,
                                               prefix='shared_qk_')
-                    self.shared_qk_ln = get_layer_norm(normalization=normalization,
+                    self.shared_qk_ln = get_norm_layer(normalization=normalization,
                                                        in_channels=real_units,
                                                        epsilon=layer_norm_eps,
                                                        prefix='shared_qk_ln_')
@@ -200,7 +200,7 @@ class MobileBertEncoderLayer(HybridBlock):
                     dtype=self._dtype,
                     layout='NTK'
                 )
-            self.layer_norm = get_layer_norm(normalization=normalization,
+            self.layer_norm = get_norm_layer(normalization=normalization,
                                              in_channels=real_units,
                                              epsilon=layer_norm_eps,
                                              prefix='ln_')
@@ -486,7 +486,7 @@ class MobileBertModel(HybridBlock):
                                                       weight_initializer=weight_initializer,
                                                       bias_initializer=bias_initializer,
                                                       prefix='embed_factorized_proj_')
-            self.embed_layer_norm = get_layer_norm(normalization=normalization,
+            self.embed_layer_norm = get_norm_layer(normalization=normalization,
                                                    in_channels=units,
                                                    epsilon=self.layer_norm_eps,
                                                    prefix='embed_ln_')

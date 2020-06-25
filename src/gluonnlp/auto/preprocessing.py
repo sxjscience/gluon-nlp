@@ -230,14 +230,14 @@ class TabularBERTPreprocessor:
                     parent_idx = text_col_idx[parent]
                 out_types.append((_C.ENTITY,
                                   {'parent_idx': parent_idx,
-                                   'col_prop': self.column_properties[col_name]}))
+                                   'prop': self.column_properties[col_name]}))
         if len(self.categorical_columns) > 0:
             out_types.extend([(_C.CATEGORICAL,
-                               {'col_prop': self.column_properties[col_name]})
+                               {'prop': self.column_properties[col_name]})
                               for col_name in self.categorical_columns])
         if len(self.numerical_columns) > 0:
             out_types.extend([(_C.NUMERICAL,
-                               {'col_prop': self.column_properties[col_name]})
+                               {'prop': self.column_properties[col_name]})
                               for col_name in self.numerical_columns])
         return out_types
 

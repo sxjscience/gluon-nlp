@@ -20,6 +20,7 @@ __all__ = ['MultiHeadDense', 'PositionalEmbedding', 'SinusoidalPositionalEmbeddi
            'PositionwiseFFN', 'ProjectedAdaptiveLogSoftmaxWithLoss']
 
 import math
+import re
 import numpy as np
 from collections import OrderedDict
 import mxnet as mx
@@ -34,12 +35,12 @@ InitializerType = Optional[Union[mx.init.Initializer, str]]
 
 
 @use_np
-def get_layer_norm(normalization: str = 'layer_norm',
+def get_norm_layer(normalization: str = 'layer_norm',
                    axis: int = -1,
                    epsilon: float = 1e-5,
                    in_channels: int = 0, **kwargs):
     """
-    Get the layer normalization based on the type
+    Get the normalization layer based on the type
 
     Parameters
     ----------
@@ -52,18 +53,20 @@ def get_layer_norm(normalization: str = 'layer_norm',
 
     Returns
     -------
-    ln
+    norm_layer
         The layer normalization layer
     """
     if isinstance(normalization, str):
         if normalization == 'layer_norm':
-            ln = nn.LayerNorm(axis=axis, epsilon=epsilon, in_channels=in_channels,
+            norm_layer = nn.LayerNorm(axis=axis, epsilon=epsilon, in_channels=in_channels,
                               **kwargs)
         elif normalization == 'no_norm':
-            ln = NoNorm(in_channels=in_channels, **kwargs)
+            norm_layer = NoNorm(in_channels=in_channels, **kwargs)
+        elif normalization == 'batch_norm':
+            norm_layer = nn.BatchNorm(axis=axis, epsilon=epsilon, in_channels=in_channels, **kwargs)
         else:
             raise NotImplementedError('normalization={} is not supported'.format(normalization))
-        return ln
+        return norm_layer
     else:
         raise NotImplementedError('The type of normalization must be str')
 
@@ -210,9 +213,15 @@ def get_activation(act: Optional[Union[str, HybridBlock]]) -> HybridBlock:
     if act is None:
         return lambda x: x
     if isinstance(act, str):
-        if act == 'leaky':
+        if act.startswith('leaky'):
             # TODO(sxjscience) Add regex matching here to parse `leaky(0.1)`
-            return nn.LeakyReLU(0.1)
+            default_alpha = 0.1
+            match_ret = re.match('leaky\((\d+.\d*)\)', act)
+            if match_ret is not None:
+                alpha = float(match_ret.groups()[0])
+                return nn.LeakyReLU(alpha)
+            else:
+                return nn.LeakyReLU(default_alpha)
         elif act == 'identity':
             return IdentityActivation()
         elif act == 'elu':
@@ -647,7 +656,7 @@ class PositionwiseFFN(HybridBlock):
                                   dtype=dtype,
                                   prefix='ffn2_')
             # TODO(sxjscience) We may need to set the dtype flag in LayerNorm, need to double check
-            self.layer_norm = get_layer_norm(normalization=normalization,
+            self.layer_norm = get_norm_layer(normalization=normalization,
                                              in_channels=units,
                                              epsilon=layer_norm_eps,
                                              prefix='ln_')
