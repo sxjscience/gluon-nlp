@@ -10,7 +10,6 @@ from gluonnlp.cli.data.general_nlp_benchmark import prepare_glue
 def test_tabular_nlp_snli_dataset():
     snli_sample_df, snli_sample_metadata = autonlp_snli_testdata()
     dataset = TabularDataset(snli_sample_df,
-                             label='label',
                              metadata=snli_sample_metadata)
     assert dataset.column_properties['sentence1'].type == _C.TEXT
     assert dataset.column_properties['sentence2'].type == _C.TEXT
@@ -67,16 +66,10 @@ def test_glue_datasets(task_name, feature_columns, label_columns):
             dev_path = os.path.join(root, task_name, 'dev.pd.pkl')
             test_path = os.path.join(root, task_name, 'test.pd.pkl')
         # We test for the parsing
-        train_data = TabularDataset(train_path,
-                                    feature=feature_columns,
-                                    label=label_columns)
+        train_data = TabularDataset(train_path)
         dev_data = TabularDataset(dev_path,
-                                  feature=train_data.feature_columns,
-                                  label=train_data.label_columns,
                                   column_properties=train_data.column_properties)
         test_data = TabularDataset(test_path,
-                                   feature=train_data.feature_columns,
-                                   label=None,
                                    column_properties=train_data.column_properties)
         if expected_label_type is not None:
             assert train_data.column_properties[label_columns].type == expected_label_type
@@ -107,17 +100,11 @@ def test_superglue_datasets(task_name, feature_columns, label_columns):
         test_path = os.path.join(root, task_name, 'test.pd.pkl')
         # We test for the parsing
         train_data = TabularDataset(train_path,
-                                    feature=feature_columns,
-                                    label=label_columns,
                                     metadata=metadata_path)
         dev_data = TabularDataset(dev_path,
-                                  feature=train_data.feature_columns,
-                                  label=train_data.label_columns,
                                   column_properties=train_data.column_properties,
                                   metadata=metadata_path)
         test_data = TabularDataset(test_path,
-                                   feature=train_data.feature_columns,
-                                   label=None,
                                    column_properties=train_data.column_properties,
                                    metadata=metadata_path)
         assert train_data.column_properties[label_columns].type == expected_label_type

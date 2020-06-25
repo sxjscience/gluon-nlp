@@ -102,3 +102,18 @@ see [SuperGLUE Diagnostic](https://super.gluebenchmark.com/diagnostics).
 |---------------|----------|----------------------|----------------|
 | Winogender    | 356 |hypothesis, premise, label | Accuracy       |
 | Broadcoverage | 1104  | label, sentence1, sentence2, logic | Matthews corr. |
+
+## Text Classification
+
+We also provide the script to download a series of text classification datasets for the 
+purpose of benchmarking.
+
+| Dataset  | #Train  | #Dev | #Test   |
+|----------|---------|------|---------|
+| IMDB     |         |      |         |
+
+References:
+
+[1] 
+[2] 
+[3]

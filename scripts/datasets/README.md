@@ -34,6 +34,7 @@ In case you will need to preprocess the dataset, there are toolkits in [preproce
 - [General NLP Benchmarks](./general_nlp_benchmark)
     - [GLUE](./general_nlp_benchmark/README.md#glue-benchmark)
     - [SuperGLUE](./general_nlp_benchmark/README.md#superglue-benchmark)
+    - [Text Classification](./general_nlp_benchmark/README.md#text-classification)
 
 ## Contribution Guide
 

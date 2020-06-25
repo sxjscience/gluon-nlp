@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Dict
+from typing import Dict, Optional
 import numpy as np
 import mxnet.gluon.data.batchify as bf
 from ..utils.preprocessing import get_trimmed_lengths, match_tokens_with_char_spans
@@ -8,6 +8,8 @@ from .column_property import ColumnProperty
 
 
 class TextTokenIdsField:
+    type = _C.TEXT
+
     def __init__(self, token_ids, segment_ids=None):
         """
 
@@ -19,13 +21,13 @@ class TextTokenIdsField:
             The segment_ids, shape (seq_length,)
         """
         self.token_ids = token_ids
-        self.length = len(token_ids)
         if segment_ids is None:
             self.segment_ids = np.zeros_like(token_ids)
         else:
             self.segment_ids = segment_ids
 
-    def batchify(self, round_to=None):
+    @classmethod
+    def batchify(cls, round_to=None):
         """Get the batchify function. The batchify function takes a list of samples.
 
         Parameters
@@ -44,7 +46,7 @@ class TextTokenIdsField:
         def batchify_fn(data):
             batch_token_ids = pad_batchify([ele.token_ids for ele in data])
             batch_segment_ids = pad_batchify([ele.segment_ids for ele in data])
-            batch_valid_length = stack_batchify([ele.length for ele in data])
+            batch_valid_length = stack_batchify([len(ele.token_ids) for ele in data])
             return batch_token_ids, batch_segment_ids, batch_valid_length
         return batchify_fn
 
@@ -58,6 +60,8 @@ class TextTokenIdsField:
 
 
 class EntityField:
+    type = _C.ENTITY
+
     def __init__(self, data, label=None):
         """
 
@@ -71,8 +75,21 @@ class EntityField:
         self.data = data
         self.label = label
 
-    def batchify(self):
-        raise NotImplementedError
+    @classmethod
+    def batchify(cls):
+        pad_batchify = bf.Pad()
+        stack_batchify = bf.Stack()
+
+        def batchify_fn(data):
+            batch_span = pad_batchify([ele.data for ele in data])
+            no_label = data[0].label is None
+            if no_label:
+                batch_label = None
+            else:
+                batch_label = pad_batchify([ele.label for ele in data])
+            batch_num_entity = stack_batchify([len(ele.data) for ele in data])
+            return batch_span, batch_label, batch_num_entity
+        return batchify_fn
 
     def __str__(self):
         ret = '{}(\n'.format(self.__class__.__name__)
@@ -82,11 +99,14 @@ class EntityField:
         return ret
 
 
-class ArrayField:
+class NumericalField:
+    type = _C.NUMERICAL
+
     def __init__(self, data):
         self.data = data
 
-    def batchify(self):
+    @classmethod
+    def batchify(cls):
         stack_batchify = bf.Stack()
 
         def batchify_fn(samples):
@@ -100,10 +120,16 @@ class ArrayField:
         return ret
 
 
+class CategoricalField(NumericalField):
+    type = _C.CATEGORICAL
+    pass
+
+
 class TabularBERTPreprocessor:
     def __init__(self, tokenizer,
                  column_properties: Dict[str, ColumnProperty],
                  max_length: int,
+                 label_column: Optional[str] = None,
                  merge_text: bool = True):
         """Preprocess the inputs to work with a pretrained model.
 
@@ -178,12 +204,8 @@ class TabularBERTPreprocessor:
     def numerical_columns(self):
         return self._numerical_columns
 
-    def filed_types(self):
+    def field_infos(self):
         """Get the types of the output features after this transformation
-
-        TEXT --> (token_ids, valid_length)
-        ENTITY --> [#ENTITY, 3], each will be (start, end, label)
-
 
         Returns
         -------
@@ -218,6 +240,33 @@ class TabularBERTPreprocessor:
                                {'col_prop': self.column_properties[col_name]})
                               for col_name in self.numerical_columns])
         return out_types
+
+    def batchify(self, round_to=None):
+        """
+
+        Parameters
+        ----------
+        round_to
+            Whether to round to a specific multiplier when calling PadBatchify
+
+        Returns
+        -------
+        batchify_fn
+        """
+        field_infos = self.field_infos()
+        batchify_fn_l = []
+        for type_code, attrs in field_infos:
+            if type_code == _C.TEXT:
+                batchify_fn_l.append(TextTokenIdsField.batchify(round_to))
+            elif type_code == _C.ENTITY:
+                batchify_fn_l.append(EntityField.batchify())
+            elif type_code == _C.CATEGORICAL:
+                batchify_fn_l.append(CategoricalField.batchify())
+            elif type_code == _C.NUMERICAL:
+                batchify_fn_l.append(NumericalField.batchify())
+            else:
+                raise NotImplementedError
+        return bf.Group(batchify_fn_l)
 
     def __call__(self, sample):
         """Transform a sample into a list of fields.
@@ -362,11 +411,11 @@ class TabularBERTPreprocessor:
             col_idx = self._col_idx_map[col_name]
             col_prop = self.column_properties[col_name]
             transformed_labels = col_prop.transform(sample[col_idx])
-            fields.append(ArrayField(transformed_labels))
+            fields.append(CategoricalField(transformed_labels))
 
         # Step 4: Transform all numerical columns
         for col_name in self.numerical_columns:
             col_idx = self._col_idx_map[col_name]
             col_prop = self.column_properties[col_name]
-            fields.append(ArrayField(col_prop.transform(sample[col_idx])))
+            fields.append(NumericalField(col_prop.transform(sample[col_idx])))
         return fields

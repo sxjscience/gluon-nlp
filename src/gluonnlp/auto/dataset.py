@@ -43,8 +43,10 @@ def is_categorical_column(data: pd.Series,
     return True
 
 
-def get_column_properties(df, column_names: Optional[List[str]] = None,
-                          metadata: Optional[Dict] = None) -> collections.OrderedDict:
+def get_column_properties(
+        df, column_names: Optional[List[str]] = None,
+        metadata: Optional[Dict] = None,
+        provided_column_properties: Optional[Dict] = None) -> collections.OrderedDict:
     """Inference the column types of the data frame
 
     Parameters
@@ -55,6 +57,10 @@ def get_column_properties(df, column_names: Optional[List[str]] = None,
         The chosen column names of the table
     metadata
         The additional metadata object to help specify the column types
+    provided_column_properties
+        The column properties provided.
+        For example, these can be the column properties of the training set and you provide this
+        to help inference the column properties of the dev/test set.
 
     Returns
     -------
@@ -67,6 +73,10 @@ def get_column_properties(df, column_names: Optional[List[str]] = None,
     if column_names is None:
         column_names = df.columns
     for col_name in column_names:
+        if provided_column_properties is not None and col_name in provided_column_properties:
+            column_properties[col_name] =\
+                provided_column_properties[col_name].parse_other(df[col_name])
+            continue
         if metadata is not None and col_name in metadata:
             col_type = metadata[col_name]['type']
             if col_type == _C.CATEGORICAL:
@@ -81,7 +91,7 @@ def get_column_properties(df, column_names: Optional[List[str]] = None,
             elif col_type == _C.ENTITY:
                 parent = metadata[col_name]['parent']
                 column_properties[col_name] = EntityColumnProperty(column_data=df[col_name],
-                                                                      parent=parent)
+                                                                   parent=parent)
                 continue
             else:
                 raise KeyError('Column type is not supported.'
@@ -144,8 +154,6 @@ def convert_text_to_numeric_df(df):
 
 class TabularDataset:
     def __init__(self, path_or_df: Union[str, pd.DataFrame],
-                 feature: Optional[Union[str, List[str]]] = None,
-                 label: Union[str, List[str]] = None,
                  metadata: Optional[Union[str, Dict]] = None,
                  column_properties: Optional[collections.OrderedDict] = None):
         """
@@ -154,10 +162,6 @@ class TabularDataset:
         ----------
         path_or_df
             The path or dataframe of the tabular dataset for NLP.
-        feature
-            Name of the feature columns
-        label
-            Name of the label columns
         metadata
             The metadata object that describes the property of the columns in the dataset
         column_properties
@@ -168,51 +172,19 @@ class TabularDataset:
             df = pd.read_pickle(path_or_df)
         else:
             df = path_or_df
-        df = convert_text_to_numeric_df(df)
-        # Parse the feature + label columns
-        feature_columns = feature
-        label_columns = label
-        if feature_columns is None and label_columns is None:
-            feature_columns = df.columns
-            label_columns = None
-        elif feature_columns is None and label_columns is not None:
-            if isinstance(label, str):
-                label_columns = [label]
-            # Inference the feature columns based on label_columns
-            feature_columns = [ele for ele in df.columns if ele not in label_columns]
-        else:
-            if isinstance(feature_columns, str):
-                feature_columns = [feature_columns]
-            if isinstance(label_columns, str):
-                label_columns = [label_columns]
-        all_columns = feature_columns.copy()
-        if label_columns is not None:
-            all_columns.extend(label_columns)
-        table = df[all_columns]
+        table = convert_text_to_numeric_df(df)
         if metadata is None:
             metadata = dict()
         elif isinstance(metadata, str):
             with open(metadata, 'r') as f:
                 metadata = json.load(f)
         # Inference the column properties
-        if column_properties is None:
-            column_properties = get_column_properties(table,
-                                                      metadata=metadata)
-        else:
-            column_properties = collections.OrderedDict(
-                [(col_name, column_properties[col_name].parse_other(df[col_name]))
-                 for col_name in all_columns])
+        column_properties = get_column_properties(table, metadata=metadata,
+                                                  provided_column_properties=column_properties)
         # Ignore some unused columns
-        feature_columns = [col_name for col_name in feature_columns
-                           if col_name in column_properties]
-        if label_columns is not None:
-            label_columns = [col_name for col_name in label_columns
-                             if col_name in column_properties]
         table = df[list(column_properties.keys())]
         self._table = table
         self._column_properties = column_properties
-        self._feature_columns = feature_columns
-        self._label_columns = label_columns
 
     @property
     def table(self):
@@ -222,32 +194,17 @@ class TabularDataset:
     def column_properties(self):
         return self._column_properties
 
-    @property
-    def feature_columns(self):
-        return self._feature_columns
-
-    @property
-    def label_columns(self):
-        return self._label_columns
-
-    def infer_problem_type(self):
-        problem_type = dict()
-        for col_name in self.label_columns:
-            if self.column_properties[col_name].type == _C.CATEGORICAL:
-                problem_type[col_name] = _C.CLASSIFICATION
-            elif self.column_properties[col_name].type == _C.NUMERICAL:
-                problem_type[col_name] = _C.REGRESSION
-            else:
-                raise NotImplementedError('Cannot infer the problem type')
-        return problem_type
+    def infer_problem_type(self, col_name):
+        if self.column_properties[col_name].type == _C.CATEGORICAL:
+            return _C.CLASSIFICATION
+        elif self.column_properties[col_name].type == _C.NUMERICAL:
+            return _C.REGRESSION
+        else:
+            raise NotImplementedError('Cannot infer the problem type')
 
     def __str__(self):
-        ret = 'Feature Columns:\n\n'
-        for col_name in self.feature_columns:
+        ret = 'Columns:\n\n'
+        for col_name in self.column_properties.keys():
             ret += '- ' + str(self.column_properties[col_name])
         ret += '\n'
-        if self.label_columns is not None:
-            ret += 'Label Columns:\n\n'
-            for col_name in self.label_columns:
-                ret += '- ' + str(self.column_properties[col_name])
         return ret
