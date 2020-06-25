@@ -62,14 +62,18 @@ def test_glue_datasets(task_name, feature_columns, label_columns):
         if task_name == 'mnli':
             dev_path = os.path.join(root, task_name, 'dev_mismatched.pd.pkl')
             test_path = os.path.join(root, task_name, 'test_mismatched.pd.pkl')
+            columns = ['sentence1', 'sentence2', 'label']
         else:
             dev_path = os.path.join(root, task_name, 'dev.pd.pkl')
             test_path = os.path.join(root, task_name, 'test.pd.pkl')
+            columns = None
         # We test for the parsing
-        train_data = TabularDataset(train_path)
+        train_data = TabularDataset(train_path, columns=columns)
         dev_data = TabularDataset(dev_path,
+                                  columns=columns,
                                   column_properties=train_data.column_properties)
         test_data = TabularDataset(test_path,
+                                   columns=columns,
                                    column_properties=train_data.column_properties)
         if expected_label_type is not None:
             assert train_data.column_properties[label_columns].type == expected_label_type

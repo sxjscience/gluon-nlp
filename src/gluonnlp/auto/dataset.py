@@ -44,7 +44,8 @@ def is_categorical_column(data: pd.Series,
 
 
 def get_column_properties(
-        df, column_names: Optional[List[str]] = None,
+        df: 'DataFrame',
+        column_names: Optional[List[str]] = None,
         metadata: Optional[Dict] = None,
         provided_column_properties: Optional[Dict] = None) -> collections.OrderedDict:
     """Inference the column types of the data frame
@@ -154,6 +155,8 @@ def convert_text_to_numeric_df(df):
 
 class TabularDataset:
     def __init__(self, path_or_df: Union[str, pd.DataFrame],
+                 *,
+                 columns=None,
                  metadata: Optional[Union[str, Dict]] = None,
                  column_properties: Optional[collections.OrderedDict] = None):
         """
@@ -162,6 +165,8 @@ class TabularDataset:
         ----------
         path_or_df
             The path or dataframe of the tabular dataset for NLP.
+        columns
+            The chosen columns to load the data
         metadata
             The metadata object that describes the property of the columns in the dataset
         column_properties
@@ -172,6 +177,10 @@ class TabularDataset:
             df = pd.read_pickle(path_or_df)
         else:
             df = path_or_df
+        if columns is not None:
+            if isinstance(columns, str):
+                columns = [columns]
+            df = df[columns]
         table = convert_text_to_numeric_df(df)
         if metadata is None:
             metadata = dict()

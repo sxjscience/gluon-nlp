@@ -173,6 +173,13 @@ def read_sts(dir_path):
         else:
             df = df[[7, 8, 1, 9]]
             df.columns = ['sentence1', 'sentence2', 'genre', 'score']
+        genre_l = []
+        for ele in df['genre'].tolist():
+            if ele == 'main-forum':
+                genre_l.append('main-forums')
+            else:
+                genre_l.append(ele)
+        df['genre'] = pd.Series(genre_l)
         df_dict[fold] = df
     return df_dict, None
 
