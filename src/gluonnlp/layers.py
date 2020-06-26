@@ -222,6 +222,8 @@ def get_activation(act: Optional[Union[str, HybridBlock]]) -> HybridBlock:
                 return nn.LeakyReLU(alpha)
             else:
                 return nn.LeakyReLU(default_alpha)
+        elif act == 'prelu':
+            return nn.PReLU()
         elif act == 'identity':
             return IdentityActivation()
         elif act == 'elu':

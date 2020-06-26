@@ -73,10 +73,14 @@ def test_positional_embedding():
 def test_get_activation():
     # Here we just test that the scripts are runnable. Should be revised to test for correctness
     for act_type in ['leaky', 'identity', 'elu', 'gelu', 'gelu(tanh)', 'gelu(sigmoid)',
-                     'relu', 'sigmoid', 'tanh', 'softrelu', 'softsign']:
+                     'relu', 'sigmoid', 'tanh', 'softrelu', 'softsign', 'prelu']:
         act = get_activation(act_type)
         act.hybridize()
         _ = act(mx.np.random.normal(0, 1, (10, 10)))
+    act = get_activation('leaky(0.2)')
+    assert act._alpha == 0.2
+    act = get_activation('leaky')
+    assert act._alpha == 0.1
 
 
 @pytest.mark.parametrize('vocab_size,cutoffs,div_val',

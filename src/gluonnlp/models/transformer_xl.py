@@ -410,7 +410,7 @@ class TransformerXLForLM(Block):
         self._cfg.freeze()
 
     def forward(self, data, target, mem_l, rel_positions=None, data_mem_mask=None,
-                causal_only=False, detach_memory=True):
+                same_length=True, detach_memory=True):
         """
 
         Parameters
@@ -463,7 +463,7 @@ class TransformerXLForLM(Block):
             'in':        1,    1,     1,     1,      1,     1,      0,        0
             'Gluon@@':   1,    1,     1,     1,      1,     1,      1,        0
             'NLP':       1,    1,     1,     1,      1,     1,      1,        1
-        causal_only
+        same_length
             Whether to ignore the local masking constraint. See the flag above for more information.
         detach_memory
             Whether to detach the encoded memory from the graph.
@@ -498,7 +498,7 @@ class TransformerXLForLM(Block):
         ctx = data.ctx
         local_attn_mask = mx.np.ones((batch_size, query_length, curr_mem_length + query_length),
                                      dtype=np.int32, ctx=ctx)
-        if not causal_only:
+        if same_length:
             # Generate the mask, we mask out the input outside the local self.mem_length window
             local_attn_mask = mx.np.triu(mx.np.tril(local_attn_mask, curr_mem_length),
                                          curr_mem_length - self.mem_length)

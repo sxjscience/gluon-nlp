@@ -1,25 +1,41 @@
+import numpy as np
 import mxnet as mx
 from mxnet.gluon import nn, HybridBlock
 from mxnet.util import use_np
 from . import constants as _C
 from ..utils.config import CfgNode
+from ..layers import get_activation, get_norm_layer
 
-class VanillaCategoricalFeatureNet(HybridBlock):
-    def __init__(self, num_class, cfg=None, prefix=None, params=None):
+
+class CategoricalFeatureNet(HybridBlock):
+    def __init__(self, num_class, units, cfg=None, prefix=None, params=None):
         super().__init__(prefix=prefix, params=params)
+        if cfg is None:
+            cfg = self.get_cfg()
+        embed_initializer = mx.init.create(*cfg.INITIALIZER.embed)
         with self.name_scope():
-            self.embedding = nn.Embedding(input_dim=num_class)
+            self.embedding = nn.Embedding(input_dim=num_class,
+                                          output_dim=cfg.emb_units,
+                                          weight_initializer=embed_initializer)
+            self.
 
     @classmethod
     def get_cfg(cls, key=None):
         if key is None:
             cfg = CfgNode()
-            cfg.units =
+            cfg.emb_units = 64
+            cfg.INITIALIZER = CfgNode()
+            cfg.INITIALIZER.embed = ['xavier', 'gaussian', 'in', 1.0]
+            return cfg
+        else:
+            raise NotImplementedError
 
 
-class VanillaNumericalFeatureNet(HybridBlock):
-    def __init__(self, input_shape, cfg=None, prefix=None, params=None):
+class NumericalFeatureNet(HybridBlock):
+    def __init__(self, input_shape, units, cfg=None, prefix=None, params=None):
         super().__init__(prefix=prefix, params=params)
+        if cfg is None:
+            cfg = self.get_cfg()
         self.input_shape = input_shape
 
     @classmethod
@@ -33,7 +49,7 @@ class VanillaNumericalFeatureNet(HybridBlock):
 
 
 class FeatureAggregator(HybridBlock):
-    def __init__(self, num_fields, out_shape, in_units,
+    def __init__(self, num_fields, out_shape, units, in_units,
                  cfg=None, prefix=None, params=None):
         super().__init__(prefix=prefix, params=params)
         if cfg is None:
@@ -42,14 +58,35 @@ class FeatureAggregator(HybridBlock):
         self.num_fields = num_fields
         self.out_shape = out_shape
         self.in_units = in_units
+        weight_initializer = mx.init.create(*self.cfg.INITIALIZER.weight)
+        bias_initializer = mx.init.create(*self.cfg.INITIALIZER.bias)
+        num_out_units = int(np.prod(out_shape))
         with self.name_scope():
-            self.proj_layers = nn.HybridSequential()
-            self.activations = nn.HybridSequential()
-            self.norm_layers = nn.HybridSequential()
+            self.proj = nn.HybridSequential()
+            in_units = in_units
             for i in range(cfg.num_layers):
                 if i == cfg.num_layers - 1:
-                    # Process the output layer
-
+                    # Generate the output layer
+                    self.proj.add(nn.Dense(units=num_out_units,
+                                           in_units=in_units,
+                                           weight_initializer=weight_initializer,
+                                           bias_initializer=bias_initializer,
+                                           flatten=False))
+                    in_units = num_out_units
+                else:
+                    # We apply the Dense + BN + Activation
+                    self.proj.add(nn.Dense(units=self.cfg.units,
+                                           in_units=in_units,
+                                           flatten=False,
+                                           weight_initializer=weight_initializer,
+                                           bias_initializer=bias_initializer,
+                                           use_bias=False))
+                    self.proj.add(get_norm_layer(self.cfg.normalization,
+                                                 axis=-1,
+                                                 epsilon=self.cfg.norm_eps,
+                                                 in_channels=in_units))
+                    self.proj.add(get_activation(self.cfg.activation))
+                    in_units = self.cfg.units
 
     @classmethod
     def get_cfg(cls, key=None):
@@ -57,10 +94,13 @@ class FeatureAggregator(HybridBlock):
             cfg = CfgNode()
             cfg.pool_type = 'mean'
             cfg.num_layers = 1
-            cfg.units = 128
             cfg.dropout = 0.2
             cfg.activation = 'leaky'
             cfg.normalization = 'batch_norm'
+            cfg.norm_eps = 1e-5
+            cfg.INITIALIZER = CfgNode()
+            cfg.INITIALIZER.weight = ['truncnorm', 0, 0.02]
+            cfg.INITIALIZER.bias = ['zeros']
         else:
             raise NotImplementedError
         return cfg
@@ -85,13 +125,13 @@ class FeatureAggregator(HybridBlock):
                 agg_features = mx.np.stack(field_proj_features)
                 agg_features = mx.np.mean(agg_features, axis=0)
         else:
+            # TODO(sxjscience) May try to implement more advanced pooling methods for
+            #  multimodal data.
             raise NotImplementedError
-        for layer in self.layers:
-
-
-
-class BackboneTextFeatureNet(HybridBlock):
-    def __init__(self, backbone, ):
+        scores = self.proj(agg_features)
+        if len(self.out_shape) != 1:
+            scores = mx.np.reshape((-1,) + self.out_shape)
+        return scores
 
 
 @use_np
@@ -105,7 +145,7 @@ class BERTForTabularClassificationV1(HybridBlock):
 
     Input:
 
-    TextField ---------> TextNet ---------> TextFeature
+    TextField + EntityField ---------> TextNet ---------> TextFeature
         ...
     CategoricalField --> CategoricalNet --> CategoricalFeature  ==> AggregateNet --> Logits/Scores
         ...
@@ -134,6 +174,7 @@ class BERTForTabularClassificationV1(HybridBlock):
         super().__init__(prefix=prefix, params=params)
         if cfg is None:
             cfg = self.get_cfg()
+        units = cfg.units
         with self.name_scope():
             self.text_backbone = text_backbone
             self.field_infos = field_infos
@@ -141,6 +182,8 @@ class BERTForTabularClassificationV1(HybridBlock):
             label_field_type_code, label_field_attrs = self.field_infos[label_name]
             if label_field_type_code == _C.CATEGORICAL:
                 num_class = label_field_attrs['col_prop'].num_class
+                self.out_layer = FeatureAggregator(num_fields=len(field_infos) - 1,
+                                                   in_units=units)
                 self.out_layer = nn.Dense(units=num_class,
                                           in_units=text_backbone.units,
                                           weight_initializer=weight_initializer,
@@ -156,7 +199,10 @@ class BERTForTabularClassificationV1(HybridBlock):
     def get_cfg(cls, key=None):
         if key is None:
             cfg = CfgNode()
-            cfg.
+            cfg.units = 768
+            cfg.AGG_NET = FeatureAggregator.get_cfg()
+            cfg.CATEGORICAL_NET = CategoricalFeatureNet.get_cfg()
+            cfg.NUMERICAL_NET = NumericalFeatureNet.get_cfg()
             cfg.INITIALIZER = CfgNode()
             cfg.INITIALIZER.weight = ['truncnorm', 0, 0.02]
             cfg.INITIALIZER.bias = ['zeros']
