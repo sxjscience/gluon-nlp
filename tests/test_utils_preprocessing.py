@@ -1,7 +1,8 @@
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
-from gluonnlp.utils.preprocessing import get_trimmed_lengths, match_tokens_with_char_spans
+from gluonnlp.utils.preprocessing import get_trimmed_lengths,\
+    match_tokens_with_char_spans, convert_token_level_span_to_char
 
 
 def test_get_trimmed_lengths():
@@ -37,3 +38,11 @@ def test_match_tokens_with_char_spans():
                                    [1, 2],
                                    [1, 3],
                                    [3, 3]]))
+
+
+def test_convert_token_level_span_to_char():
+    token_offsets = np.array([(0, 1), (1, 3), (2, 4)])
+    token_spans = np.array([(0, 2), (1, 2), (1, 1)])
+    char_spans = convert_token_level_span_to_char(token_offsets=token_offsets,
+                                                  token_span_start_ends=token_spans)
+    assert_allclose(char_spans, np.array([[0, 4], [1, 4], [1, 3]]))
