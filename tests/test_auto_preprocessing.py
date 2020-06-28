@@ -22,7 +22,7 @@ def test_tabular_bert_preprocessor_case1(merge_text):
                                                          column_properties=dataset.column_properties,
                                                          max_length=max_length,
                                                          label_columns='label',
-                                                         merge_text=True)
+                                                         merge_text=merge_text)
     train_preprocessed = preprocessor.process_train(dataset.table)
     test_preprocessed = preprocessor.process_test(dataset.table)
     train_mx_dataset = ArrayDataset(train_preprocessed)
@@ -34,9 +34,11 @@ def test_tabular_bert_preprocessor_case1(merge_text):
     num_shift = 0
     train_missed_entity = {key: [0, 0] for key in preprocessor.entity_columns}
     for feature_batch, label_batch in train_dataloader:
+        # Recover the token offsets
+
         for i, (field_type_code, field_attrs) in enumerate(preprocessor.feature_field_info()):
             if field_type_code == _C.TEXT:
-                batch_token_ids, batch_segment_ids, batch_valid_length = feature_batch[i]
+                batch_token_ids, batch_segment_ids, batch_valid_length, batch_token_offsets = feature_batch[i]
                 assert batch_token_ids.shape[1] <= max_length
                 assert batch_segment_ids.shape == batch_token_ids.shape
                 assert batch_valid_length.max() <= max_length
@@ -51,7 +53,7 @@ def test_tabular_bert_preprocessor_case1(merge_text):
                     num_span = batch_num_entity[idx].asnumpy().item()
                     spans = spans[:num_span].asnumpy()
                     original_idx = idx + num_shift
-                    char_spans = convert_span_token_start_ends_to_char(spans)
+                    char_spans = convert_span_token_start_ends_to_char(token_offsets, spans)
                     for span in spans:
                         span_token_ids = parent_token_ids[idx][span[0]:(span[1] + 1)].tolist()
                         print(tokenizer.decode(span_token_ids))

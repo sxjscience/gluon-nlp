@@ -1,6 +1,4 @@
-from collections import namedtuple
 from . import constants as _C
-import numpy as np
 from mxnet.gluon.data import batchify as bf
 
 

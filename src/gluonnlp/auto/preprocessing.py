@@ -64,6 +64,7 @@ def process_text_entity_features(
         max_length: int,
         entity_props,
         merge_text: bool = False,
+        store_token_offsets = True,
         truncate_out_of_range: bool = True):
     """Process the text and entity features
 
@@ -83,6 +84,8 @@ def process_text_entity_features(
         The column properties of the entities
     merge_text
         Whether to merge th individual text columns
+    store_token_offsets
+        Whether to get the token offsets
     truncate_out_of_range
         Whether to truncate the out-of-the-range entities.
 
@@ -95,35 +98,28 @@ def process_text_entity_features(
     """
     text_features = []
     entity_features = []
-    if entity_props is None:
-        text_col_need_offsets = None
-    else:
-        text_col_need_offsets = set([ele.parent for ele in entity_props.values()])
     # Step 1: Get the token_ids + token_offsets of all text columns.
-    sentence_start_in_merged = dict() # Store the start + end of each sentence
-    sentence_slice_stat = dict() # Store the sliced start + end of the sentence
+    sentence_start_in_merged = dict()  # Store the start + end of each sentence
+    sentence_slice_stat = dict()  # Store the sliced start + end of the sentence
     text_token_ids = OrderedDict()
     text_token_offsets = OrderedDict()
     for col_name in text_columns:
-        if col_name in text_col_need_offsets:
-            token_ids, token_offsets = tokenizer.encode_with_offsets(data[col_name], int)
-            token_ids = np.array(token_ids)
-            token_offsets = np.array(token_offsets)
-            text_token_ids[col_name] = token_ids
-            text_token_offsets[col_name] = token_offsets
-        else:
-            token_ids = tokenizer.encode(data[col_name], int)
-            token_ids = np.array(token_ids)
-            text_token_ids[col_name] = token_ids
+        token_ids, token_offsets = tokenizer.encode_with_offsets(data[col_name], int)
+        token_ids = np.array(token_ids)
+        token_offsets = np.array(token_offsets)
+        text_token_ids[col_name] = token_ids
+        text_token_offsets[col_name] = token_offsets
     lengths = [len(text_token_ids[col_name]) for col_name in text_columns]
     if merge_text:
         # We will merge the text tokens by
-        # Token IDs =  [CLS] token_ids1 [SEP] token_ids2 [SEP]
-        # Segment IDs = 0       0          0       1        1
+        # Token IDs =      [CLS]    token_ids1       [SEP]      token_ids2         [SEP]
+        # Segment IDs =      0         0               0           1                 1
+        # Token Offsets = (-1, -1), token_offsets1   (-1, -1)    token_offsets2   (-1, -1)
         trimmed_lengths = get_trimmed_lengths(lengths,
                                               max_length=max_length - len(lengths) - 1,
                                               do_merge=True)
         encoded_token_ids = [np.array([tokenizer.vocab.cls_id])]
+        encoded_token_offsets = [np.array([[-1, -1]])]
         segment_ids = [np.array([0])]
         shift = 1
         for idx, (trim_length, col_name) in enumerate(zip(trimmed_lengths, text_columns)):
@@ -134,10 +130,18 @@ def process_text_entity_features(
             segment_ids.append(np.full_like(encoded_token_ids[-1], idx))
             encoded_token_ids.append(np.array([tokenizer.vocab.sep_id]))
             segment_ids.append(np.array([idx]))
+            encoded_token_offsets.append(text_token_offsets[col_name][:slice_length])
+            encoded_token_offsets.append(np.array([[-1, -1]]))
             shift += slice_length + 1
         encoded_token_ids = np.concatenate(encoded_token_ids).astype(np.int32)
         segment_ids = np.concatenate(segment_ids).astype(np.int32)
-        text_features.append(TextTokenIdsField(encoded_token_ids, segment_ids))
+        if store_token_offsets:
+            encoded_token_offsets = np.concatenate(encoded_token_offsets).astype(np.int32)
+            text_features.append(TextTokenIdsField(encoded_token_ids, segment_ids,
+                                                   encoded_token_offsets))
+        else:
+            text_features.append(TextTokenIdsField(encoded_token_ids, segment_ids,
+                                                   None))
     else:
         # We encode each sentence independently
         # [CLS] token_ids1 [SEP], [CLS] token_ids2 [SEP]
@@ -151,10 +155,19 @@ def process_text_entity_features(
             encoded_token_ids = np.concatenate(np.array([tokenizer.vocab.cls_id]),
                                                text_token_ids[col_name][:trim_length],
                                                np.array([tokenizer.vocab.sep_id]))
-
-            text_features.append(TextTokenIdsField(encoded_token_ids.astype(np.int32),
-                                                   np.zeros_like(encoded_token_ids,
-                                                                 dtype=np.int32)))
+            encoded_token_offsets = np.concatenate(np.array([[-1, -1]]),
+                                                   text_token_offsets[col_name][:trim_length],
+                                                   np.array([[-1, -1]]))
+            if store_token_offsets:
+                text_features.append(TextTokenIdsField(encoded_token_ids.astype(np.int32),
+                                                       np.zeros_like(encoded_token_ids,
+                                                                     dtype=np.int32),
+                                                       encoded_token_offsets))
+            else:
+                text_features.append(TextTokenIdsField(encoded_token_ids.astype(np.int32),
+                                                       np.zeros_like(encoded_token_ids,
+                                                                     dtype=np.int32),
+                                                       None))
     # Step 2: Transform all entity columns
     for col_name in entity_columns:
         entities = data[col_name]
