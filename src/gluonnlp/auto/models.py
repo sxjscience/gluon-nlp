@@ -8,7 +8,7 @@ from ..layers import get_activation, get_norm_layer
 
 
 class BasicMLP(HybridBlock):
-    def __init__(self, in_shape, mid_units, out_units,
+    def __init__(self, in_units, mid_units, out_units,
                  num_layers=1, normalization='batch_norm',
                  norm_eps=1E-5, dropout=0.1,
                  activation='leaky',
@@ -20,7 +20,7 @@ class BasicMLP(HybridBlock):
 
         Parameters
         ----------
-        in_shape
+        in_units
         mid_units
         out_units
         num_layers
@@ -30,8 +30,7 @@ class BasicMLP(HybridBlock):
         activation
         """
         super().__init__(prefix=prefix, params=params)
-        self.in_units = int(np.prod(in_shape))
-        in_units = self.in_units
+        self.in_units = in_units
         with self.name_scope():
             self.proj = nn.HybridSequential()
             with self.proj.name_scope():
@@ -56,7 +55,7 @@ class BasicMLP(HybridBlock):
                                        flatten=False))
 
     def hybrid_forward(self, F, x):
-        return self.proj(F.np.reshape(x, (-1, self.in_units)))
+        return self.proj(x)
 
 
 class CategoricalFeatureNet(HybridBlock):
@@ -72,7 +71,7 @@ class CategoricalFeatureNet(HybridBlock):
                                           output_dim=cfg.emb_units,
                                           weight_initializer=embed_initializer)
             with self.name_scope():
-                self.proj = BasicMLP(in_shape=(cfg.emb_units,),
+                self.proj = BasicMLP(in_units=cfg.emb_units,
                                      mid_units=cfg.mid_units,
                                      out_units=out_units,
                                      num_layers=cfg.num_layers,
@@ -113,11 +112,15 @@ class NumericalFeatureNet(HybridBlock):
         if cfg is None:
             cfg = self.get_cfg()
         self.input_shape = input_shape
+        self.in_units = int(np.prod(input_shape))
         self.cfg = cfg
         weight_initializer = mx.init.create(*cfg.INITIALIZER.weight)
         bias_initializer = mx.init.create(*cfg.INITIALIZER.bias)
         with self.name_scope():
-            self.proj = BasicMLP(in_shape=input_shape,
+            if self.cfg.input_centering:
+                self.data_bn = nn.BatchNorm(in_channels=self.in_units,
+                                            use_global_stats=True)
+            self.proj = BasicMLP(in_units=self.in_units,
                                  mid_units=cfg.mid_units,
                                  out_units=out_units,
                                  num_layers=cfg.num_layers,
@@ -132,6 +135,7 @@ class NumericalFeatureNet(HybridBlock):
     def get_cfg(cls, key=None):
         if key is None:
             cfg = CfgNode()
+            cfg.input_centering = False
             cfg.mid_units = 128
             cfg.num_layers = 1
             cfg.dropout = 0.1
@@ -146,6 +150,9 @@ class NumericalFeatureNet(HybridBlock):
         return cfg
 
     def hybrid_forward(self, F, feature):
+        feature = F.np.reshap(feature, (-1, self.in_units))
+        if self.cfg.input_centering:
+            feature = self.data_bn(feature)
         return self.proj(feature)
 
 
@@ -170,7 +177,7 @@ class FeatureAggregator(HybridBlock):
                 in_units = in_units * num_fields
             else:
                 raise NotImplementedError
-            self.proj = BasicMLP(in_shape=(in_units,),
+            self.proj = BasicMLP(in_units=in_units,
                                  mid_units=cfg.mid_units,
                                  out_units=out_units,
                                  num_layers=cfg.num_layers,
@@ -234,7 +241,7 @@ class FeatureAggregator(HybridBlock):
 class BERTForTabularClassificationV1(HybridBlock):
     """The basic model for tabular classification + regression with
     BERT (and its variants like ALBERT, MobileBERT, ELECTRA, etc.)
-     as the backbone for handling text data.
+    as the backbone for handling text data.
 
     Here, we use the backbone network to extract the contextual embeddings and use
     another dense layer to map the contextual embeddings to the class scores.
@@ -249,7 +256,9 @@ class BERTForTabularClassificationV1(HybridBlock):
     """
     def __init__(self, text_backbone,
                  feature_field_info,
-                 label_field_info,
+                 num_class=None,
+                 label_shape=None,
+                 problem_type=_C.CLASSIFICATION,
                  cfg=None,
                  prefix=None,
                  params=None):
@@ -262,10 +271,14 @@ class BERTForTabularClassificationV1(HybridBlock):
         feature_field_info
             The field information of the training data. Each will be a tuple:
             - (field_type, attributes)
-        label_field_info
-            The idx of the label column
+        num_class
+            The number of classes. Must be specified if the problem type is 'classification'
+        label_shape
+            The shape of the label. If we need a scalar, it will be an empty tuple "()".
+        problem_type
+            The type of the problem
         cfg
-            Configuration
+            The configuration of the network
         prefix
         params
         """
@@ -276,41 +289,40 @@ class BERTForTabularClassificationV1(HybridBlock):
         feature_units = self.cfg.feature_units
         if feature_units == -1:
             feature_units = text_backbone.units
+        if problem_type == _C.CLASSIFICATION:
+            assert num_class is not None, '"num_class" must be set if the problem type is' \
+                                          ' classification!'
+            out_shape = (num_class,)
+        elif problem_type == _C.REGRESSION:
+            if label_shape is None:
+                label_shape = ()
+            out_shape = label_shape
+        else:
+            raise NotImplementedError('The problem is not supported!')
         with self.name_scope():
             self.text_backbone = text_backbone
-            self.field_infos = field_infos
-            self.label_idx = label_idx
+            self.feature_field_info = feature_field_info
             self.categorical_fields = []
             self.numerical_fields = []
-            self.agg_layer = None
+            self.agg_layer = FeatureAggregator(num_fields=len(feature_field_info),
+                                               out_shape=out_shape,
+                                               in_units=feature_units,
+                                               cfg=cfg.AGG_NET)
             self.categorical_networks = nn.HybridSequential()
             self.numerical_networks = nn.HybridSequential()
             for i, (field_type_code, field_attrs) in enumerate(self.field_infos):
-                if i == label_idx:
-                    if field_type_code == _C.CATEGORICAL:
-                        num_class = field_attrs['prop'].num_class
-                        out_shape = (num_class,)
-                    elif field_type_code == _C.NUMERICAL:
-                        out_shape = field_attrs['prop'].shape
-                    else:
-                        raise NotImplementedError
-                    self.agg_layer = FeatureAggregator(num_fields=len(field_infos) - 1,
-                                                       out_shape=out_shape,
-                                                       in_units=feature_units,
-                                                       cfg=cfg.AGG_NET)
-                else:
-                    if field_type_code == _C.CATEGORICAL:
-                        categorical_mapping_net = nn.HybridSequential()
-                        categorical_mapping_net.add(
-                            CategoricalFeatureNet(num_class=field_attrs['prop'].num_class,
-                                                  out_units=feature_units,
-                                                  cfg=cfg.CATEGORICAL_NET))
-                        self.categorical_networks.add(categorical_mapping_net)
-                    elif field_type_code == _C.NUMERICAL:
-                        numerical_mapping_net = nn.HybridSequential()
-                        numerical_mapping_net.add(
-                            NumericalFeatureNet(input_shape=field_attrs['prop'].shape,
-                                                out_units=feature_units))
+                if field_type_code == _C.CATEGORICAL:
+                    categorical_mapping_net = nn.HybridSequential()
+                    categorical_mapping_net.add(
+                        CategoricalFeatureNet(num_class=field_attrs['prop'].num_class,
+                                              out_units=feature_units,
+                                              cfg=cfg.CATEGORICAL_NET))
+                    self.categorical_networks.add(categorical_mapping_net)
+                elif field_type_code == _C.NUMERICAL:
+                    numerical_mapping_net = nn.HybridSequential()
+                    numerical_mapping_net.add(
+                        NumericalFeatureNet(input_shape=field_attrs['prop'].shape,
+                                            out_units=feature_units))
 
     @classmethod
     def get_cfg(cls, key=None):
@@ -318,7 +330,7 @@ class BERTForTabularClassificationV1(HybridBlock):
             cfg = CfgNode()
             cfg.feature_units = -1  # -1 means not given and we will use the units of BERT
             cfg.TEXT_NET = CfgNode()
-            cfg.TEXT_NET.backbone_type = 'bert'
+            cfg.TEXT_NET.use_segment_id = True
             cfg.TEXT_NET.agg_type = 'cls'
             cfg.AGG_NET = FeatureAggregator.get_cfg()
             cfg.CATEGORICAL_NET = CategoricalFeatureNet.get_cfg()
@@ -343,6 +355,22 @@ class BERTForTabularClassificationV1(HybridBlock):
         logits_or_scores
             Shape (batch_size,) + out_shape
         """
-        features_l = []
+        field_features = []
+        text_contextual_features = dict()
         for i, (field_type_code, field_attrs) in enumerate(self.field_infos):
-            if i != self.
+            if field_type_code == _C.TEXT:
+                batch_token_ids, batch_valid_length, batch_segment_ids, _ = features[i]
+                if self.cfg.TEXT_NET.use_segment_id:
+                    contextual_embedding, pooled_output = self.text_backbone(batch_token_ids,
+                                                                             batch_segment_ids,
+                                                                             batch_valid_length)
+                else:
+                    contextual_embedding = self.text_backbone(batch_token_ids, batch_valid_length)
+                text_contextual_features[i] = contextual_embedding
+            elif field_type_code == _C.ENTITY:
+
+            elif field_type_code == _C.CATEGORICAL:
+                batch_sample = features[i]
+            elif field_type_code == _C.NUMERICAL:
+                batch_sample = features[i]
+

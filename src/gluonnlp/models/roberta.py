@@ -96,6 +96,7 @@ def roberta_base():
     cfg.freeze()
     return cfg
 
+
 @roberta_cfg_reg.register()
 def roberta_large():
     cfg = roberta_base()
@@ -350,17 +351,33 @@ class RobertaEncoder(HybridBlock):
                         )
                     )
 
-    def hybrid_forward(self, F, x, valid_length):
-        atten_mask = gen_self_attn_mask(F, x, valid_length,
+    def hybrid_forward(self, F, inputs, valid_length):
+        """
+
+        Parameters
+        ----------
+        F
+        inputs
+            Shape (batch_size, seq_length)
+        valid_length
+            Shape (batch_size,)
+
+        Returns
+        -------
+        out
+            Either a list that contains all the hidden states or a list with one element
+        """
+        atten_mask = gen_self_attn_mask(F, inputs, valid_length,
                                         dtype=self.dtype, attn_type='full')
-        inner_states = [x]
+        inner_states = [inputs]
         for layer_idx in range(self.num_layers):
             layer = self.all_layers[layer_idx]
-            x, _ = layer(x, atten_mask)
-            inner_states.append(x)
+            inputs, _ = layer(inputs, atten_mask)
+            inner_states.append(inputs)
         if not self.return_all_hiddens:
-            inner_states = [x]
+            inner_states = [inputs]
         return inner_states
+
 
 @use_np
 class RobertaLMHead(HybridBlock):

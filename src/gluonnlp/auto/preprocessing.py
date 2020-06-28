@@ -64,7 +64,7 @@ def process_text_entity_features(
         max_length: int,
         entity_props,
         merge_text: bool = False,
-        store_token_offsets = True,
+        store_token_offsets: bool = True,
         truncate_out_of_range: bool = True):
     """Process the text and entity features
 
@@ -203,6 +203,7 @@ class TabularClassificationBERTPreprocessor:
                  max_length: int,
                  label_columns,
                  feature_columns: Optional[Union[str, List[str]]] = None,
+                 store_token_offsets: bool = True,
                  merge_text: bool = True):
         """Preprocess the inputs to work with a pretrained model.
 
@@ -218,6 +219,8 @@ class TabularClassificationBERTPreprocessor:
             The name of the label column
         feature_columns
             Names of the feature columns.
+        store_token_offsets
+            Whether to store the token offsets
         merge_text
             Whether to merge the token_ids when there are multiple text fields.
             For example, we will merge the text fields as
@@ -240,6 +243,7 @@ class TabularClassificationBERTPreprocessor:
                                      if key not in self._label_columns]
         self._max_length = max_length
         self._merge_text = merge_text
+        self._store_token_offsets = store_token_offsets
         self._text_columns = []
         self._entity_columns = []
         self._categorical_columns = []
@@ -483,6 +487,7 @@ class TabularClassificationBERTPreprocessor:
                 entity_props=OrderedDict([(col_name, self.column_properties[col_name])
                                           for col_name in self.entity_columns]),
                 merge_text=self.merge_text,
+                store_token_offsets=self._store_token_offsets,
                 truncate_out_of_range=True)
         feature_fields.extend(text_fields)
         feature_fields.extend(entity_fields)
