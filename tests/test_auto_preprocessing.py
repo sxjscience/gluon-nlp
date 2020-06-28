@@ -38,9 +38,11 @@ def test_tabular_bert_preprocessor_case1(merge_text):
             else:
                 feature_batch = batch
                 label_batch = None
+            batch_size = None
             for i, (field_type_code, field_attrs) in enumerate(preprocessor.feature_field_info()):
                 if field_type_code == _C.TEXT:
                     batch_token_ids, batch_valid_length, batch_segment_ids, batch_token_offsets = feature_batch[i]
+                    batch_size = len(batch_token_ids)
                     assert batch_token_ids.shape[1] <= max_length
                     assert batch_segment_ids.shape == batch_token_ids.shape
                     assert batch_valid_length.max() <= max_length
@@ -57,7 +59,6 @@ def test_tabular_bert_preprocessor_case1(merge_text):
                         num_span = batch_num_entity[idx].asnumpy().item()
                         token_spans = spans[:num_span].asnumpy()
                         original_idx = idx + num_shift
-                        print('original_idx:', original_idx, idx, num_shift)
                         original_parent_text = dataset.table[parent_name][original_idx]
                         char_spans = convert_token_level_span_to_char(parent_token_offsets[idx], token_spans)
                         for token_span, char_span in zip(token_spans, char_spans):
@@ -77,8 +78,7 @@ def test_tabular_bert_preprocessor_case1(merge_text):
             if label_batch is not None:
                 assert len(label_batch) == 1
                 assert ((label_batch[0] >= 0) * label_batch[0] <= 2).asnumpy().all()
-            num_shift += len(feature_batch[0])
-            print('typ:', num_shift)
+            num_shift += batch_size
             mx.npx.waitall()
         assert num_shift == len(dataset.table)
         for key, (num_match, num_total) in missed_total_entity.items():
