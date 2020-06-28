@@ -125,14 +125,16 @@ def process_text_entity_features(
                                               do_merge=True)
         encoded_token_ids = [np.array([tokenizer.vocab.cls_id])]
         segment_ids = [np.array([0])]
+        shift = 1
         for idx, (trim_length, col_name) in enumerate(zip(trimmed_lengths, text_columns)):
             slice_length = min(len(text_token_ids[col_name]), trim_length)
-            sentence_start_in_merged[col_name] = len(encoded_token_ids)
+            sentence_start_in_merged[col_name] = shift
             sentence_slice_stat[col_name] = (0, slice_length)
             encoded_token_ids.append(text_token_ids[col_name][:slice_length])
             segment_ids.append(np.full_like(encoded_token_ids[-1], idx))
             encoded_token_ids.append(np.array([tokenizer.vocab.sep_id]))
             segment_ids.append(np.array([idx]))
+            shift += slice_length + 1
         encoded_token_ids = np.concatenate(encoded_token_ids).astype(np.int32)
         segment_ids = np.concatenate(segment_ids).astype(np.int32)
         text_features.append(TextTokenIdsField(encoded_token_ids, segment_ids))

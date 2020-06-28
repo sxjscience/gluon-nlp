@@ -110,3 +110,26 @@ def match_tokens_with_char_spans(token_offsets: np.ndarray,
     span_token_ends = np.searchsorted(offsets_ends, span_char_ends, side='left')
     return np.concatenate((np.expand_dims(span_token_starts, axis=-1),
                            np.expand_dims(span_token_ends, axis=-1)), axis=-1)
+
+
+def span_token_start_ends_in_char(token_offsets, span_token_start_ends):
+    """Map the token-level start + end of the spans back to the char-level start + ends
+
+    Parameters
+    ----------
+    token_offsets
+        The original token offsets
+        Shape (num_token, 2)
+    span_token_start_ends
+        The token-level starts + ends of span
+        Shape (num_entity, 2)
+
+    Returns
+    -------
+    span_char_start_ends
+        char-level start + end of the span
+    """
+    char_begins = token_offsets[span_token_start_ends[:, 0], 0]
+    char_ends = token_offsets[span_token_start_ends[:, 1], 1]
+    return np.concatenate((np.expand_dims(char_begins, axis=-1),
+                           np.expand_dims(char_ends, axis=-1)))
