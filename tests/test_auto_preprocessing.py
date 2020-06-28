@@ -22,13 +22,16 @@ def test_tabular_bert_preprocessor(merge_text):
                                                          max_length=max_length,
                                                          label_columns='label',
                                                          merge_text=True)
-    with mp.Pool(num_mp_workers()) as pool:
-        preprocessed_samples = pool.map(preprocessor, np_table)
-    mx_dataset = ArrayDataset(preprocessed_samples)
-    dataloader = DataLoader(mx_dataset, batch_size=4, shuffle=False,
-                            batchify_fn=preprocessor.batchify())
-    for batch in dataloader:
-        for i, (field_type_code, filed_attrs) in enumerate(field_infos):
+    train_preprocessed = preprocessor.process_train(dataset.table)
+    test_preprocessed = preprocessor.process_test(dataset.table)
+    train_mx_dataset = ArrayDataset(train_preprocessed)
+    test_mx_dataset = ArrayDataset(test_preprocessed)
+    train_dataloader = DataLoader(train_mx_dataset, batch_size=4, shuffle=False,
+                                  batchify_fn=preprocessor.batchify(is_test=False))
+    test_dataloader = DataLoader(test_mx_dataset, batch_size=4, shuffle=False,
+                                 batchify_fn=preprocessor.batchify(is_test=True))
+    for batch in train_dataloader:
+        for i, (field_type_code, filed_attrs) in enumerate(preprocessor.feature_field_info()):
             if field_type_code == _C.TEXT:
                 batch_token_ids, batch_segment_ids, batch_valid_length = batch[i]
                 assert batch_token_ids.shape[1] <= max_length

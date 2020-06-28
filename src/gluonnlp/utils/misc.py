@@ -543,5 +543,17 @@ def check_version(min_version: str,
 
 
 def num_mp_workers(max_worker=4):
+    """Get the default number multiprocessing workers
+
+    Parameters
+    ----------
+    max_worker
+        The max allowed number of workers
+
+    Returns
+    -------
+    num_max_worker
+        number of max worker
+    """
     import multiprocessing as mp
     return min(mp.cpu_count(), max_worker)
