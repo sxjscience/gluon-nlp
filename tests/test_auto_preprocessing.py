@@ -4,7 +4,7 @@ import mxnet as mx
 from mxnet.gluon.data import ArrayDataset, DataLoader
 from gluonnlp.models.bert import get_pretrained_bert
 from gluonnlp.auto.dataset import TabularDataset
-from gluonnlp.auto.preprocessing import TabularBERTPreprocessor
+from gluonnlp.auto.preprocessing import TabularClassificationBERTPreprocessor
 from gluonnlp.utils.testing import autonlp_snli_testdata
 from gluonnlp.utils.misc import num_mp_workers
 from gluonnlp.auto import constants as _C
@@ -17,12 +17,11 @@ def test_tabular_bert_preprocessor(merge_text):
     _, tokenizer, _, _ = get_pretrained_bert()
     dataset = TabularDataset(test_snli_df, metadata=test_snli_metadata)
     max_length = 60
-    preprocessor = TabularBERTPreprocessor(tokenizer=tokenizer,
-                                           column_properties=dataset.column_properties,
-                                           max_length=max_length,
-                                           merge_text=merge_text)
-    np_table = dataset.table.to_numpy()
-    field_infos = preprocessor.field_infos()
+    preprocessor = TabularClassificationBERTPreprocessor(tokenizer=tokenizer,
+                                                         column_properties=dataset.column_properties,
+                                                         max_length=max_length,
+                                                         label_columns='label',
+                                                         merge_text=True)
     with mp.Pool(num_mp_workers()) as pool:
         preprocessed_samples = pool.map(preprocessor, np_table)
     mx_dataset = ArrayDataset(preprocessed_samples)

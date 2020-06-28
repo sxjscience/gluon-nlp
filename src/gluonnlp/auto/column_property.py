@@ -1,6 +1,5 @@
 import abc
 import pandas as pd
-import multiprocessing as mp
 import numpy as np
 import collections
 from typing import List, Optional, Union, Tuple, Hashable
@@ -12,7 +11,7 @@ __all__ = ['CategoricalColumnProperty', 'TextColumnProperty', 'NumericalColumnPr
            'EntityColumnProperty']
 
 
-lang_id = LanguageIdentifier()
+lang_id = LanguageIdentifier(algo='fasttext_compressed')
 
 
 class ColumnProperty(abc.ABC):
@@ -43,6 +42,11 @@ class ColumnProperty(abc.ABC):
     def transform(self, ele):
         return ele
 
+    # TODO(sxjscience) Try to add parse method
+    @classmethod
+    def parse(cls, column_data: pd.Series):
+        pass
+
     @abc.abstractmethod
     def parse_other(self, column_data: pd.Series):
         """Parse another column data with the given property"""
@@ -62,6 +66,21 @@ class ColumnProperty(abc.ABC):
                 ret += ' ' * padding + '{}={}\n'.format(key, str(info))
         ret += ')\n'
         return ret
+
+    #TODO(sxjscience) Add serialzation
+    def to_json(self):
+        pass
+
+    @classmethod
+    def from_json(cls, json_str: Union[str, bytes, bytearray]):
+        pass
+
+    def save(self):
+        pass
+
+    @classmethod
+    def load(cls):
+        pass
 
     def __str__(self):
         return self.info()
@@ -208,8 +227,7 @@ class TextColumnProperty(ColumnProperty):
         else:
             # Determine the language
             sel_data = column_data[:100].tolist()
-            with mp.Pool(num_mp_workers()) as pool:
-                infer_lang_scores = pool.map(lang_id, sel_data)
+            infer_lang_scores = map(lang_id, sel_data)
             uniq_lang, counts = np.unique([dat[0] for dat in infer_lang_scores], return_counts=True)
             self._lang = uniq_lang[counts.argmax()]
 
@@ -523,3 +541,24 @@ class EntityColumnProperty(ColumnProperty):
         elif self.label_type == _C.NUMERICAL:
             additional_attributes.append(('label_shape', self.label_shape))
         return super().info(additional_attributes)
+
+
+class ColumnProperties:
+    def __init__(self, col_props):
+        super().__init__()
+        self.data = col_props
+
+    def keys(self):
+        return self.data.keys()
+
+    def values(self):
+        return self.data.values()
+
+    def items(self):
+        return self.data.items()
+
+    def __str__(self):
+        pass
+
+    def to_json(self):
+        pass

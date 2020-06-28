@@ -1075,3 +1075,45 @@ class ProjectedAdaptiveLogSoftmaxWithLoss(HybridBlock):
 
     def __repr__(self):
         return _gen_repr_with_kwargs(self._kwargs, self.__class__.__name__)
+
+
+@use_np
+class SelfAttentiveSpanExtractor(HybridBlock):
+    def __init__(self, in_units, prefix=None, params=None):
+        super().__init__(prefix=prefix, params=params)
+        pass
+
+    def hybrid_forward(self, F, sequence_data, sequence_valid_length,
+                       span_indices, span_valid_length):
+        pass
+
+
+@use_np
+class EndpointSpanExtractor(HybridBlock):
+    def __init__(self, in_units, combination, num_width_embeddings, span_width_embedding_dim,
+                 prefix=None, params=None):
+        super().__init__(prefix=prefix, params=params)
+        pass
+
+    def hybrid_forward(self, F, sequence_data, sequence_valid_length,
+                       span_indices, span_valid_length):
+        """
+
+        Parameters
+        ----------
+        F
+        sequence_data
+            The token embeddings. Shape (B, T, C_in)
+        sequence_valid_length
+            Shape (B,)
+        span_indices
+            Shape (B, num_span, 2)
+        span_valid_length
+            Shape (B,)
+
+        Returns
+        -------
+        span_features
+            Shape (B, num_span, C_out)
+        """
+        pass
