@@ -38,7 +38,7 @@ def test_tabular_bert_preprocessor_case1(merge_text):
 
         for i, (field_type_code, field_attrs) in enumerate(preprocessor.feature_field_info()):
             if field_type_code == _C.TEXT:
-                batch_token_ids, batch_segment_ids, batch_valid_length, batch_token_offsets = feature_batch[i]
+                batch_token_ids, batch_valid_length, batch_segment_ids, batch_token_offsets = feature_batch[i]
                 assert batch_token_ids.shape[1] <= max_length
                 assert batch_segment_ids.shape == batch_token_ids.shape
                 assert batch_valid_length.max() <= max_length
