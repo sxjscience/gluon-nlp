@@ -7,6 +7,7 @@ from gluonnlp.auto.dataset import TabularDataset
 from gluonnlp.auto.preprocessing import TabularClassificationBERTPreprocessor
 from gluonnlp.utils.testing import autonlp_snli_testdata
 from gluonnlp.utils.misc import num_mp_workers
+from gluonnlp.utils.preprocessing import convert_span_token_start_ends_to_char
 from gluonnlp.auto import constants as _C
 
 test_snli_df, test_snli_metadata = autonlp_snli_testdata()
@@ -40,16 +41,18 @@ def test_tabular_bert_preprocessor_case1(merge_text):
                 assert batch_segment_ids.shape == batch_token_ids.shape
                 assert batch_valid_length.max() <= max_length
                 assert (batch_token_ids[:, 0].asnumpy() == tokenizer.vocab.cls_id).all()
+                assert (batch_token_ids[:, -1].asnumpy() == tokenizer.vocab.sep_id).all()
             elif field_type_code == _C.ENTITY:
                 batch_spans, batch_labels, batch_num_entity = feature_batch[i]
                 parent_idx = field_attrs['parent_idx']
                 original_name = field_attrs['prop'].name
                 parent_token_ids = feature_batch[parent_idx][0].asnumpy()
                 for idx, spans in enumerate(batch_spans):
+                    num_span = batch_num_entity[idx].asnumpy().item()
+                    spans = spans[:num_span].asnumpy()
                     original_idx = idx + num_shift
-                    char_spans =
-                    for span_idx in range(batch_num_entity[idx].asnumpy().item()):
-                        span = spans[span_idx].asnumpy()
+                    char_spans = convert_span_token_start_ends_to_char(spans)
+                    for span in spans:
                         span_token_ids = parent_token_ids[idx][span[0]:(span[1] + 1)].tolist()
                         print(tokenizer.decode(span_token_ids))
                         ch = input()

@@ -7,7 +7,7 @@ from mxnet.gluon.data import batchify as bf
 class TextTokenIdsField:
     type = _C.TEXT
 
-    def __init__(self, token_ids, segment_ids=None):
+    def __init__(self, token_ids, segment_ids=None, token_offsets=None):
         """
 
         Parameters
@@ -16,12 +16,12 @@ class TextTokenIdsField:
             The token_ids, shape (seq_length,)
         segment_ids
             The segment_ids, shape (seq_length,)
+        token_offsets
+            The character-level offsets of the token, shape (seq_length, 2)
         """
         self.token_ids = token_ids
-        if segment_ids is None:
-            self.segment_ids = np.zeros_like(token_ids)
-        else:
-            self.segment_ids = segment_ids
+        self.segment_ids = segment_ids
+        self.token_offsets = token_offsets
 
     @classmethod
     def batchify(cls, round_to=None):
@@ -51,22 +51,31 @@ class TextTokenIdsField:
             -------
             batch_token_ids
                 (batch_size, sequence_length)
-            batch_segment_ids
-                (batch_size, sequence_length)
             batch_valid_length
                 (batch_size,)
+            batch_segment_ids
+                (batch_size, sequence_length)
+            batch_token_offsets
+                (batch_size, seq_length, 2)
             """
             batch_token_ids = pad_batchify([ele.token_ids for ele in data])
-            batch_segment_ids = pad_batchify([ele.segment_ids for ele in data])
             batch_valid_length = stack_batchify([len(ele.token_ids) for ele in data])
-            return batch_token_ids, batch_segment_ids, batch_valid_length
+            if data[0].segment_ids is None:
+                batch_segment_ids = None
+            else:
+                batch_segment_ids = pad_batchify([ele.segment_ids for ele in data])
+            if data[0].token_offsets is None:
+                batch_token_offsets = None
+            else:
+                batch_token_offsets = pad_batchify([ele.token_offsets for ele in data])
+            return batch_token_ids, batch_valid_length, batch_segment_ids, batch_token_offsets
         return batchify_fn
 
     def __str__(self):
         ret = '{}(\n'.format(self.__class__.__name__)
         ret += 'token_ids={}\n'.format(self.token_ids)
-        ret += 'length={}\n'.format(self.token_ids)
-        ret += 'segment_ids={}\n'.format(self.token_ids)
+        ret += 'segment_ids={}\n'.format(self.segment_ids)
+        ret += 'token_offsets={}\n'.format(self.token_offsets)
         ret += ')\n'
         return ret
 
