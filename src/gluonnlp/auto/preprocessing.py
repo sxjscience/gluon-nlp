@@ -152,12 +152,12 @@ def process_text_entity_features(
         for trim_length, col_name in zip(trimmed_lengths, text_columns):
             slice_length = min(len(text_token_ids[col_name]), trim_length)
             sentence_slice_stat[col_name] = (0, slice_length)
-            encoded_token_ids = np.concatenate(np.array([tokenizer.vocab.cls_id]),
-                                               text_token_ids[col_name][:trim_length],
-                                               np.array([tokenizer.vocab.sep_id]))
-            encoded_token_offsets = np.concatenate(np.array([[-1, -1]]),
-                                                   text_token_offsets[col_name][:trim_length],
-                                                   np.array([[-1, -1]]))
+            encoded_token_ids = np.concatenate([np.array([tokenizer.vocab.cls_id]),
+                                                text_token_ids[col_name][:trim_length],
+                                                np.array([tokenizer.vocab.sep_id])], axis=0)
+            encoded_token_offsets = np.concatenate([np.array([[-1, -1]]),
+                                                    text_token_offsets[col_name][:trim_length],
+                                                    np.array([[-1, -1]])], axis=0)
             if store_token_offsets:
                 text_features.append(TextTokenIdsField(encoded_token_ids.astype(np.int32),
                                                        np.zeros_like(encoded_token_ids,
@@ -407,16 +407,10 @@ class TabularClassificationBERTPreprocessor:
                             bf.Group(label_batchify_fn_l))
 
     def process_train(self, df):
-        if len(df) > 1000:
-            return parallel_transform(df, functools.partial(self.__call__, is_test=False))
-        else:
-            return _chunk_processor(df, functools.partial(self.__call__, is_test=False))
+        return parallel_transform(df, functools.partial(self.__call__, is_test=False))
 
     def process_test(self, df):
-        if len(df) > 1000:
-            return parallel_transform(df, functools.partial(self.__call__, is_test=True))
-        else:
-            return _chunk_processor(df, functools.partial(self.__call__, is_test=False))
+        return parallel_transform(df, functools.partial(self.__call__, is_test=True))
 
     def __call__(self, data, is_test=False):
         """Transform the data into a list of fields.
@@ -512,7 +506,7 @@ class TabularClassificationBERTPreprocessor:
             numerical_fields.append(NumericalField(col_prop.transform(data[col_name])))
         feature_fields.extend(numerical_fields)
         if is_test:
-            return feature_fields
+            return tuple(feature_fields)
         else:
             label_fields = []
             for col_name in self.label_columns:
@@ -523,4 +517,4 @@ class TabularClassificationBERTPreprocessor:
                     label_fields.append(NumericalField(col_prop.transform(data[col_name])))
                 else:
                     raise NotImplementedError
-            return feature_fields, label_fields
+            return tuple(feature_fields), tuple(label_fields)
