@@ -24,9 +24,11 @@ import numpy as np
 import mxnet as mx
 from collections import defaultdict
 from mxnet.gluon import Parameter
+from mxnet.util import use_np
 from typing import Iterable, Optional, Tuple
 
 
+@use_np
 def grad_global_norm(parameters: Iterable[Parameter]) -> float:
     """Calculate the 2-norm of gradients of parameters, and how much they should be scaled down
     such that their 2-norm does not exceed `max_norm`, if `max_norm` if provided.
@@ -93,6 +95,7 @@ def grad_global_norm(parameters: Iterable[Parameter]) -> float:
     return total_norm
 
 
+@use_np
 def clip_grad_global_norm(parameters: Iterable[Parameter],
                           max_norm: float,
                           check_isfinite: bool = True) -> Tuple[float, float, bool]:
@@ -153,3 +156,13 @@ def clip_grad_global_norm(parameters: Iterable[Parameter],
             for arr in p.list_grad():
                 arr *= scale
     return total_norm, ratio, is_finite
+
+
+@use_np
+def move_to_ctx(arr, ctx):
+    if isinstance(arr, tuple):
+        return tuple(ele.as_in_ctx(ctx) for ele in arr)
+    elif isinstance(arr, list):
+        return [ele.as_in_ctx(ctx) for ele in arr]
+    else:
+        return arr.as_in_ctx(ctx)
