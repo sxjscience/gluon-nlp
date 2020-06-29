@@ -302,9 +302,8 @@ def train(args):
     feature_columns, label_columns = TASKS[args.task]
     if isinstance(feature_columns, str):
         feature_columns = [feature_columns]
-    elif isinstance(label_columns, str):
+    if isinstance(label_columns, str):
         label_columns = [label_columns]
-    print(label_columns, type(label_columns))
     assert len(label_columns) == 1, 'Multi-label classification is currently not supported!'
     train_dataset = TabularDataset(train_df, columns=feature_columns + label_columns)
     dev_dataset = TabularDataset(dev_df, columns=feature_columns + label_columns,
