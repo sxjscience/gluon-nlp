@@ -13,17 +13,14 @@ nlp_data prepare_glue --benchmark superglue
 - Run training script
 
 ```bash
-TASK=glue/sst
-FEATURE_COLUMNS=sentence
-LABEL_COLUMNS=label
-TRAIN_FILE=${TASK}/train.pd.pkl
-DEV_FILE=${TASK}/dev.pd.pkl
-TEST_FILE=${TASK}/test.pd.pkl
+TASK=sst
+TRAIN_FILE=glue/${TASK}/train.pd.pkl
+DEV_FILE=glue/${TASK}/dev.pd.pkl
+TEST_FILE=glue/${TASK}/test.pd.pkl
 python run_text_classification.py \
      --do_train \
      --train_file ${TRAIN_FILE} \
      --dev_file ${DEV_FILE} \
      --test_file ${TEST_FILE} \
-     --feature_columns ${FEATURE_COLUMNS} \
-     --label_columns ${LABEL_COLUMNS}
+     --task ${task} \
 ```

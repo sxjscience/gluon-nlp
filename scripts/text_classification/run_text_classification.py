@@ -1,15 +1,22 @@
 import pickle
+import time
 import mxnet as mx
-import itertools
+import os
+import math
+import logging
+from sklearn.metrics import accuracy_score, f1_score, matthews_corrcoef, roc_auc_score
+from scipy.stats import pearsonr
 from mxnet.lr_scheduler import PolyScheduler, CosineScheduler
 from gluonnlp.lr_scheduler import InverseSquareRootScheduler
 from mxnet.gluon.data import DataLoader
+from gluonnlp.auto import constants as _C
 from gluonnlp.auto.dataset import TabularDataset
 from gluonnlp.auto.preprocessing import TabularClassificationBERTPreprocessor, infer_problem_type
 from gluonnlp.auto.models.classification import BERTForTabularClassificationV1
 from gluonnlp.models import get_backbone
 from gluonnlp.utils.config import CfgNode
-from gluonnlp.utils.misc import parse_ctx, set_seed, grouper, infinite_loop
+from gluonnlp.utils.misc import parse_ctx, set_seed, grouper, repeat, logging_config
+from gluonnlp.utils.parameter import move_to_ctx, clip_grad_global_norm
 import pandas as pd
 import argparse
 import numpy as np
@@ -50,6 +57,8 @@ class OptimizationV1Config:
         cfg.max_grad_norm = 1.0 # Maximum Gradient Norm
         # The validation frequency = validation frequency * num_updates_in_an_epoch
         cfg.valid_frequency = 0.5
+        # Logging frequency = log frequency * num_updates_in_an_epoch
+        cfg.log_frequency = 0.05
         return cfg
 
 
@@ -125,6 +134,9 @@ def parse_args():
                         default=None)
     parser.add_argument('--metadata', type=str, help='The metadata of the problem.',
                         default=None)
+    parser.add_argument('--batch_size', type=int, help='Total batch_size', default=None)
+    parser.add_argument('--num_accumulated', type=int, help='Num of gradient accumulation',
+                        default=None)
     parser.add_argument('--dev_file', type=str,
                         help='The validation pandas dataframe',
                         default=None)
@@ -133,6 +145,9 @@ def parse_args():
                         default=None)
     parser.add_argument('--task', type=str,
                         help='The default tasks',
+                        default=None)
+    parser.add_argument('--save_dir', type=str,
+                        help='The directory to save the experiment',
                         default=None)
     parser.add_argument('--eval_metric', type=str,
                         help='The metrics for evaluating the models.',
@@ -193,12 +208,88 @@ def apply_layerwise_decay(model, layerwise_decay, not_included=None):
             value.lr_mult = layerwise_decay**(max_depth - layer_depth)
 
 
+def validate(net, dataloader, gt_label, ctx_l, problem_type, eval_metrics=None, pos_label=1):
+    """
+
+    Parameters
+    ----------
+    net
+    dataloader
+    gt_label
+    ctx_l
+    problem_type
+    eval_metrics
+        The evaluation metrics
+    pos_label
+        Will only be used if it's F1 score
+
+    Returns
+    -------
+    predictions
+    metric_scores
+    """
+    predictions = []
+    metric_scores = dict()
+    for sample_l in grouper(dataloader, len(ctx_l)):
+        iter_pred_l = []
+        for batch_feature, ctx in zip(sample_l, ctx_l):
+            if batch_feature is None:
+                continue
+            batch_feature = move_to_ctx(batch_feature, ctx)
+            pred = net(batch_feature)
+            if problem_type == _C.CLASSIFICATION:
+                pred = mx.npx.softmax(pred, axis=-1)
+            iter_pred_l.append(pred)
+        for pred in iter_pred_l:
+            predictions.append(pred.asnumpy())
+    predictions = np.stack(predictions, axis=0)
+    if eval_metrics is None:
+        if problem_type == _C.CLASSIFICATION:
+            eval_metrics = ['acc', 'f1', 'mcc', 'auc', 'nll']
+        elif problem_type == _C.REGRESSION:
+            eval_metrics = ['mse']
+        else:
+            raise NotImplementedError
+    for metric_name in eval_metrics:
+        if metric_name == 'acc':
+            metric_scores[metric_name] = accuracy_score(gt_label, predictions.argmax(axis=-1))
+        elif metric_name == 'f1':
+            metric_scores[metric_name] = f1_score(gt_label, predictions.argmax(axis=-1),
+                                                  pos_label=pos_label)
+        elif metric_name == 'mcc':
+            metric_scores[metric_name] = matthews_corrcoef(gt_label, predictions.argmax(axis=-1))
+        elif metric_name == 'auc':
+            metric_scores[metric_name] = roc_auc_score(gt_label, predictions[:, pos_label])
+        elif metric_name == 'nll':
+            metric_scores[metric_name] = - np.log(predictions[np.arange(gt_label.shape[0]),
+                                                              gt_label]).mean()
+        elif metric_name == 'pearsonr':
+            metric_scores[metric_name] = pearsonr(gt_label, predictions)
+        elif metric_name == 'mse':
+            metric_scores[metric_name] = np.square(predictions - gt_label).mean()
+        else:
+            raise ValueError('Unknown metric = {}'.format(metric_name))
+    return predictions, metric_scores
+
+
 def train(args):
     ctx_l = parse_ctx(args.gpus)
     all_cfg = Config.get_cfg()
     if args.config_file is not None:
         all_cfg = all_cfg.clone_merge(args.config_file)
+    if args.batch_size is not None or args.num_accumulated is not None:
+        all_cfg.defrost()
+        if args.batch_size is not None:
+            all_cfg.OPTIMIZATION.batch_size = args.batch_size
+        if args.num_accumulated is not None:
+            all_cfg.OPTIMIZATION.num_accumulated = args.num_accumulated
+        all_cfg.freeze()
+    if args.save_dir is None:
+        args.save_dir = '{}_{}'.format(args.task, all_cfg.MODEL.BACKBONE.name)
+    logging_config(args.save_dir, name='text_classification')
     set_seed(all_cfg.SEED)
+    with open(os.path.join(args.save_dir, 'cfg.yml'), 'w') as f:
+        f.write(all_cfg.dump())
     optimization_cfg = all_cfg.OPTIMIZATION
     model_cfg = all_cfg.MODEL
     backbone_model_cls, backbone_cfg, tokenizer, backbone_params_path\
@@ -237,7 +328,9 @@ def train(args):
     train_dataloader = DataLoader(processed_train, batch_size=batch_size,
                                   shuffle=True, batchify_fn=preprocessor.batchify(is_test=False))
     dev_dataloader = DataLoader(processed_dev, batch_size=inference_batch_size,
-                                shuffle=False, batchify_fn=preprocessor.batchify(is_test=False))
+                                shuffle=False, batchify_fn=preprocessor.batchify(is_test=True))
+    dev_gt_labels = np.concatenate([label_batch[0].asnumpy() for _, label_batch in processed_dev],
+                                   axis=0)
     test_dataloader = DataLoader(processed_test, batch_size=inference_batch_size,
                                  shuffle=False, batchify_fn=preprocessor.batchify(is_test=True))
     # Build the network
@@ -251,10 +344,11 @@ def train(args):
     net.hybridize()
 
     # Initialize the optimizer
-    updates_per_epoch = len(train_dataloader) * optimization_cfg.num_accumulated
+    updates_per_epoch = int(len(train_dataloader) / (optimization_cfg.num_accumulated * len(ctx_l)))
     optimizer, optimizer_params, max_update = get_optimizer(optimization_cfg,
                                                             updates_per_epoch=updates_per_epoch)
-    valid_every_k_update = int(optimization_cfg.valid_frequency * updates_per_epoch)
+    valid_interval = math.ceil(optimization_cfg.valid_frequency * updates_per_epoch)
+    train_log_interval = math.ceil(optimization_cfg.log_frequency * updates_per_epoch)
     trainer = mx.gluon.Trainer(net.collect_params(),
                                optimizer, optimizer_params,
                                update_on_kvstore=False)
@@ -263,22 +357,92 @@ def train(args):
     # Do not apply weight decay to all the LayerNorm and bias
     for _, v in net.collect_params('.*beta|.*gamma|.*bias').items():
         v.wd_mult = 0.0
-
-    train_infinite_iter = grouper(itertools.cycle(train_dataloader), len(ctx_l))
-    is_last_batch = False
-    update_count = 0
-    while True:
-        try:
-            sample_data_l = next(train_multi_data_loader)
-        except StopIteration:
-            train_multi_data_loader = grouper(train_dataloader, len(ctx_l))
-            sample_data_l = next(train_multi_data_loader)
-        for sample_data, ctx in zip(sample_data_l, )
+    params = [p for p in net.collect_params().values() if p.grad_req != 'null']
+    # Set grad_req if gradient accumulation is required
+    if optimization_cfg.num_accumulated > 1:
+        logging.info('Using gradient accumulation. Global batch size = {}'
+                     .format(optimization_cfg.batch_size))
+        for p in params:
+            p.grad_req = 'add'
+        net.collect_params().zero_grad()
+    train_loop_dataloader = grouper(repeat(train_dataloader), len(ctx_l))
+    log_loss_l = [mx.np.array(0.0, dtype=np.float32, ctx=ctx) for ctx in ctx_l]
+    log_num_samples_l = [0 for _ in ctx_l]
+    logging_start_tick = time.time()
+    for update_idx in range(max_update):
+        num_samples_l = [0 for _ in ctx_l]
+        for accum_idx in range(optimization_cfg.num_accumulated):
+            sample_l = next(train_loop_dataloader)
+            loss_l = []
+            for i, (sample, ctx) in enumerate(sample_l, ctx_l):
+                feature_batch, label_batch = sample
+                feature_batch = move_to_ctx(feature_batch, ctx)
+                label_batch = move_to_ctx(label_batch, ctx)
+                with mx.autograd.record():
+                    pred = net(feature_batch)
+                    if problem_type == _C.CLASSIFICATION:
+                        logits = mx.npx.softmax(pred, axis=-1)
+                        loss = - mx.npx.pick(logits, label_batch[0])
+                    elif problem_type == _C.REGRESSION:
+                        loss = mx.np.square(pred - label_batch[0])
+                    loss_l.append(loss.sum() / batch_size)
+                    num_samples_l[i] += np.prod(loss.shape)
+            for loss in loss_l:
+                loss.backward()
+            for i in range(len(ctx_l)):
+                log_loss_l[i] += loss_l[i]
+                log_num_samples_l[i] += num_samples_l[i]
+        # Begin to update
+        trainer.allreduce_grads()
+        # Here, the accumulated gradients are
+        # \sum_{n=1}^N g_n / batch_size
+        # Thus, in order to clip the average gradient
+        #   \frac{1}{N} \sum_{n=1}^N      -->  clip to args.max_grad_norm
+        # We need to change the ratio to be
+        #  \sum_{n=1}^N g_n / batch_size  -->  clip to args.max_grad_norm  * N / batch_size
+        num_samples_per_update = sum(num_samples_l)
+        total_norm, ratio, is_finite =\
+            clip_grad_global_norm(params,
+                                  optimization_cfg.max_grad_norm * num_samples_per_update / batch_size)
+        total_norm = total_norm / (num_samples_per_update / batch_size)
+        trainer.update(num_samples_per_update / batch_size)
+        net.collect_params().zero_grad()
+        if (update_idx + 1) % train_log_interval == 0:
+            log_loss = sum([ele.as_in_ctx(ctx_l[0]) for ele in log_loss_l]).asnumpy()
+            log_num_samples = sum(log_num_samples_l)
+            avg_log_loss = log_loss / log_num_samples * batch_size
+            logging.info('[Iter {}/{}, Epoch {}] train loss={}, gnorm={}, #samples processed={},'
+                         ' #sample per second={}'
+                         .format(update_idx, max_update, int(update_idx / updates_per_epoch),
+                                 avg_log_loss, total_norm,
+                                 log_num_samples,
+                                 log_num_samples / (time.time() - logging_start_tick)))
+            logging_start_tick = time.time()
+            for i in range(len(ctx_l)):
+                log_loss_l[i][:] = 0
+                log_num_samples_l[i] = 0
+        if (update_idx + 1) % valid_interval == 0:
+            valid_start_tick = time.time()
+            predictions, metric_scores = validate(net, dataloader=dev_dataloader,
+                                                  gt_label=dev_gt_labels,
+                                                  ctx_l=ctx_l,
+                                                  problem_type=problem_type)
+            valid_time_spent = time.time() - valid_start_tick
+            np.savez_compressed('iter{}_prediction.npz'.format(update_idx),
+                                predictions=predictions, labels=dev_gt_labels)
+            loss_string = ''
+            for i, key in enumerate(sorted(metric_scores.keys())):
+                if i < len(metric_scores) - 1:
+                    loss_string += '{}={}, '
+                else:
+                    loss_string += '{}={}'
+            logging.info('[Iter {}/{}, Epoch {}] valid {}, time spent={}'.format(
+                update_idx, max_update, int(update_idx / updates_per_epoch),
+                loss_string, valid_time_spent))
 
 
 def predict(args):
-    assert args.test_file is not None
-    test_df = pd.read_pickle(args.test_file)
+    raise NotImplementedError
 
 
 if __name__ == '__main__':
