@@ -17,7 +17,8 @@
 """Layers."""
 __all__ = ['MultiHeadDense', 'PositionalEmbedding', 'SinusoidalPositionalEmbedding',
            'LearnedPositionalEmbedding', 'BucketPositionalEmbedding', 'AdaptiveEmbedding',
-           'PositionwiseFFN', 'ProjectedAdaptiveLogSoftmaxWithLoss']
+           'PositionwiseFFN', 'ProjectedAdaptiveLogSoftmaxWithLoss',
+           'get_norm_layer', 'get_activation']
 
 import math
 import re
@@ -44,12 +45,14 @@ def get_norm_layer(normalization: str = 'layer_norm',
 
     Parameters
     ----------
-    normalization: str, default: 'layer_norm'
-        The type of the layer normalization from ['layer_norm', 'no_norm']
+    normalization
+        The type of the layer normalization from ['layer_norm', 'no_norm', 'batch_norm']
     axis
         The axis to normalize the
     epsilon
+        The epsilon of the normalization layer
     in_channels
+        Input channel
 
     Returns
     -------
@@ -59,9 +62,11 @@ def get_norm_layer(normalization: str = 'layer_norm',
     if isinstance(normalization, str):
         if normalization == 'layer_norm':
             norm_layer = nn.LayerNorm(axis=axis, epsilon=epsilon, in_channels=in_channels,
-                              **kwargs)
+                                      **kwargs)
         elif normalization == 'no_norm':
             norm_layer = NoNorm(in_channels=in_channels, **kwargs)
+        elif normalization == 'identity':
+            norm_layer = IdentityActivation()
         elif normalization == 'batch_norm':
             norm_layer = nn.BatchNorm(axis=axis, epsilon=epsilon, in_channels=in_channels, **kwargs)
         else:

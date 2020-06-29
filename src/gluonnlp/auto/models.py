@@ -8,15 +8,20 @@ from ..layers import get_activation, get_norm_layer
 
 
 class BasicMLP(HybridBlock):
-    def __init__(self, in_units, mid_units, out_units,
-                 num_layers=1, normalization='batch_norm',
-                 norm_eps=1E-5, dropout=0.1,
+    def __init__(self, in_units,
+                 mid_units,
+                 out_units,
+                 num_layers=1,
+                 normalization='batch_norm',
+                 norm_eps=1E-5,
+                 dropout=0.1,
+                 data_dropout=False,
                  activation='leaky',
                  weight_initializer=None,
                  bias_initializer=None,
                  prefix=None, params=None):
         """
-        data -> [Dense -> BN -> ACT] * N -> dropout -> Dense -> out
+        data -> [dropout] * (0/1) -> [Dense -> Normalization -> ACT] * N -> dropout -> Dense -> out
 
         Parameters
         ----------
@@ -24,6 +29,7 @@ class BasicMLP(HybridBlock):
         mid_units
         out_units
         num_layers
+            Number of intermediate layers
         normalization
         norm_eps
         dropout
@@ -31,10 +37,15 @@ class BasicMLP(HybridBlock):
         """
         super().__init__(prefix=prefix, params=params)
         self.in_units = in_units
+        self.data_dropout = data_dropout
+        if mid_units < 0:
+            mid_units = in_units
         with self.name_scope():
             self.proj = nn.HybridSequential()
             with self.proj.name_scope():
-                for i in range(num_layers - 1):
+                if num_layers > 0 and data_dropout:
+                    self.proj.add(nn.Dropout(dropout))
+                for i in range(num_layers):
                     self.proj.add(nn.Dense(units=mid_units,
                                            in_units=in_units,
                                            flatten=False,
@@ -77,6 +88,7 @@ class CategoricalFeatureNet(HybridBlock):
                                      num_layers=cfg.num_layers,
                                      normalization=cfg.normalization,
                                      norm_eps=cfg.norm_eps,
+                                     data_dropout=cfg.data_dropout,
                                      dropout=cfg.dropout,
                                      activation=cfg.activation,
                                      weight_initializer=weight_initializer,
@@ -89,6 +101,7 @@ class CategoricalFeatureNet(HybridBlock):
             cfg.emb_units = 64
             cfg.mid_units = 128
             cfg.num_layers = 1
+            cfg.data_dropout = False
             cfg.dropout = 0.1
             cfg.activation = 'leaky'
             cfg.normalization = 'batch_norm'
@@ -126,6 +139,7 @@ class NumericalFeatureNet(HybridBlock):
                                  num_layers=cfg.num_layers,
                                  normalization=cfg.normalization,
                                  norm_eps=cfg.norm_eps,
+                                 data_dropout=cfg.data_dropout,
                                  dropout=cfg.dropout,
                                  activation=cfg.activation,
                                  weight_initializer=weight_initializer,
@@ -138,6 +152,7 @@ class NumericalFeatureNet(HybridBlock):
             cfg.input_centering = False
             cfg.mid_units = 128
             cfg.num_layers = 1
+            cfg.data_dropout = False
             cfg.dropout = 0.1
             cfg.activation = 'leaky'
             cfg.normalization = 'batch_norm'
@@ -184,6 +199,7 @@ class FeatureAggregator(HybridBlock):
                                  normalization=cfg.normalization,
                                  norm_eps=cfg.norm_eps,
                                  dropout=cfg.dropout,
+                                 data_dropout=cfg.data_dropout,
                                  activation=cfg.activation,
                                  weight_initializer=weight_initializer,
                                  bias_initializer=bias_initializer)
@@ -192,9 +208,10 @@ class FeatureAggregator(HybridBlock):
     def get_cfg(cls, key=None):
         if key is None:
             cfg = CfgNode()
-            cfg.agg_type = 'mean'
+            cfg.agg_type = 'concat'
             cfg.mid_units = 128
             cfg.num_layers = 1
+            cfg.data_dropout = False
             cfg.dropout = 0.1
             cfg.activation = 'leaky'
             cfg.normalization = 'batch_norm'
@@ -312,26 +329,26 @@ class BERTForTabularClassificationV1(HybridBlock):
             self.numerical_networks = nn.HybridSequential()
             for i, (field_type_code, field_attrs) in enumerate(self.field_infos):
                 if field_type_code == _C.CATEGORICAL:
-                    categorical_mapping_net = nn.HybridSequential()
-                    categorical_mapping_net.add(
-                        CategoricalFeatureNet(num_class=field_attrs['prop'].num_class,
-                                              out_units=feature_units,
-                                              cfg=cfg.CATEGORICAL_NET))
-                    self.categorical_networks.add(categorical_mapping_net)
+                    with self.categorical_networks.name_scope():
+                        self.categorical_networks.add(
+                            CategoricalFeatureNet(num_class=field_attrs['prop'].num_class,
+                                                  out_units=feature_units,
+                                                  cfg=cfg.CATEGORICAL_NET))
                 elif field_type_code == _C.NUMERICAL:
-                    numerical_mapping_net = nn.HybridSequential()
-                    numerical_mapping_net.add(
-                        NumericalFeatureNet(input_shape=field_attrs['prop'].shape,
-                                            out_units=feature_units))
+                    with self.numerical_networks.name_scope():
+                        self.numerical_networks.add(
+                            NumericalFeatureNet(input_shape=field_attrs['prop'].shape,
+                                                out_units=feature_units))
 
     @classmethod
     def get_cfg(cls, key=None):
         if key is None:
             cfg = CfgNode()
             cfg.feature_units = -1  # -1 means not given and we will use the units of BERT
+            # TODO(sxjscience) Use a class to store the TextNet
             cfg.TEXT_NET = CfgNode()
             cfg.TEXT_NET.use_segment_id = True
-            cfg.TEXT_NET.agg_type = 'cls'
+            cfg.TEXT_NET.pool_type = 'cls'
             cfg.AGG_NET = FeatureAggregator.get_cfg()
             cfg.CATEGORICAL_NET = CategoricalFeatureNet.get_cfg()
             cfg.NUMERICAL_NET = NumericalFeatureNet.get_cfg()
@@ -357,6 +374,8 @@ class BERTForTabularClassificationV1(HybridBlock):
         """
         field_features = []
         text_contextual_features = dict()
+        categorical_count = 0
+        numerical_count = 0
         for i, (field_type_code, field_attrs) in enumerate(self.field_infos):
             if field_type_code == _C.TEXT:
                 batch_token_ids, batch_valid_length, batch_segment_ids, _ = features[i]
@@ -366,11 +385,21 @@ class BERTForTabularClassificationV1(HybridBlock):
                                                                              batch_valid_length)
                 else:
                     contextual_embedding = self.text_backbone(batch_token_ids, batch_valid_length)
+                    pooled_output = contextual_embedding[:, 0, :]
+                assert self.TEXT_NET.pool_type == 'cls'
                 text_contextual_features[i] = contextual_embedding
+                field_features.append(pooled_output)
             elif field_type_code == _C.ENTITY:
-
+                # TODO Implement via segment-sum
+                raise NotImplementedError('Currently not supported')
             elif field_type_code == _C.CATEGORICAL:
                 batch_sample = features[i]
+                extracted_feature = self.categorical_networks[categorical_count](batch_sample)
+                categorical_count += 1
+                field_features.append(extracted_feature)
             elif field_type_code == _C.NUMERICAL:
                 batch_sample = features[i]
-
+                extracted_feature = self.numerical_networks[numerical_count](batch_sample)
+                numerical_count += 1
+                field_features.append(extracted_feature)
+        return self.agg_layer(field_features)
