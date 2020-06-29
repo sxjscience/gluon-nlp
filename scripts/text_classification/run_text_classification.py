@@ -407,6 +407,7 @@ def train(args):
     log_loss_l = [mx.np.array(0.0, dtype=np.float32, ctx=ctx) for ctx in ctx_l]
     log_num_samples_l = [0 for _ in ctx_l]
     logging_start_tick = time.time()
+    best_loss = np.inf
     for update_idx in range(max_update):
         num_samples_per_update_l = [0 for _ in ctx_l]
         for accum_idx in range(optimization_cfg.num_accumulated):
@@ -471,6 +472,19 @@ def train(args):
             np.savez_compressed(os.path.join(args.save_dir,
                                              'iter{}_prediction.npz'.format(update_idx)),
                                 predictions=predictions, labels=gt_labels)
+            if problem_type == _C.CLASSIFICATION:
+                if metric_scores['nll'] < best_loss:
+                    best_loss = metric_scores['nll']
+                    logging.info('Find better valid!')
+                    is_best = True
+                else:
+                    is_best = False
+            elif problem_type == _C.REGRESSION:
+                if metric_scores['mse'] < best_loss:
+                    best_loss = metric_scores['mse']
+                    is_best = True
+                else:
+                    is_best = False
             loss_string = ''
             for i, key in enumerate(sorted(metric_scores.keys())):
                 if i < len(metric_scores) - 1:
