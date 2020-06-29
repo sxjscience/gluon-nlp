@@ -292,7 +292,7 @@ def train(args):
         f.write(all_cfg.dump())
     optimization_cfg = all_cfg.OPTIMIZATION
     model_cfg = all_cfg.MODEL
-    backbone_model_cls, backbone_cfg, tokenizer, backbone_params_path\
+    backbone_model_cls, backbone_cfg, tokenizer, backbone_params_path, _\
         = get_backbone(model_cfg.BACKBONE.name)
     text_backbone = backbone_model_cls.from_cfg(backbone_cfg)
     # Load train and dev dataset

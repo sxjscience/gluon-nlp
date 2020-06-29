@@ -22,7 +22,7 @@ python run_text_classification.py \
      --train_file ${TRAIN_FILE} \
      --dev_file ${DEV_FILE} \
      --test_file ${TEST_FILE} \
-     --task ${task} \
+     --task ${TASK} \
      --batch_size 32 \
      --num_accumulated 2 \
      --gpus 0,1,2,3
