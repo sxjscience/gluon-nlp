@@ -320,7 +320,7 @@ def train(args):
     processed_train = preprocessor.process_train(train_dataset.table)
     processed_dev = preprocessor.process_train(dev_dataset.table)
     processed_test = preprocessor.process_test(test_dataset.table)
-    problem_type, label_shape = infer_problem_type(label_columns[0])
+    problem_type, label_shape = infer_problem_type(column_properties[label_columns[0]])
 
     batch_size = optimization_cfg.batch_size // len(ctx_l) // optimization_cfg.num_accumulated
     inference_batch_size = batch_size * optimization_cfg.val_batch_size_mult
