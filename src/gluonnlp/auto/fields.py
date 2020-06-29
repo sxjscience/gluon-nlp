@@ -2,21 +2,6 @@ from . import constants as _C
 from mxnet.gluon.data import batchify as bf
 
 
-class FeatureTuple:
-    def __init__(self, *args):
-        self.data = args
-
-    def __getitem__(self, item):
-        return self.data[item]
-
-    def __len__(self):
-        return len(self.data)
-
-    def as_in_ctx(self, ctx):
-        new_data = [self.data.as_in_ctx(ctx) if self.data is not None else None]
-        return FeatureTuple(*new_data)
-
-
 class TextTokenIdsField:
     type = _C.TEXT
 
@@ -81,8 +66,7 @@ class TextTokenIdsField:
                 batch_token_offsets = None
             else:
                 batch_token_offsets = pad_batchify([ele.token_offsets for ele in data])
-            return FeatureTuple(batch_token_ids, batch_valid_length,
-                                batch_segment_ids, batch_token_offsets)
+            return batch_token_ids, batch_valid_length, batch_segment_ids, batch_token_offsets
         return batchify_fn
 
     def __str__(self):
@@ -139,7 +123,7 @@ class EntityField:
             else:
                 batch_label = pad_batchify([ele.label for ele in data])
             batch_num_entity = stack_batchify([len(ele.data) for ele in data])
-            return FeatureTuple(batch_span, batch_label, batch_num_entity)
+            return batch_span, batch_label, batch_num_entity
         return batchify_fn
 
     def __str__(self):

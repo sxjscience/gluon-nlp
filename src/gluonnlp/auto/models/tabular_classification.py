@@ -230,7 +230,7 @@ class FeatureAggregator(HybridBlock):
             raise NotImplementedError
         return cfg
 
-    def forward(self, field_proj_features):
+    def hybrid_forward(self, F, field_proj_features):
         """
 
         Parameters
@@ -247,17 +247,17 @@ class FeatureAggregator(HybridBlock):
             agg_features = field_proj_features[0]
         else:
             if self.cfg.agg_type == 'mean':
-                agg_features = mx.np.stack(field_proj_features)
-                agg_features = mx.np.mean(agg_features, axis=0)
+                agg_features = F.np.stack(field_proj_features)
+                agg_features = F.np.mean(agg_features, axis=0)
             elif self.cfg.agg_type == 'concat':
-                agg_features = mx.np.concatenate(field_proj_features, axis=-1)
+                agg_features = F.np.concatenate(field_proj_features, axis=-1)
             else:
                 # TODO(sxjscience) May try to implement more advanced pooling methods for
                 #  multimodal data.
                 raise NotImplementedError
         scores = self.proj(agg_features)
         if len(self.out_shape) != 1:
-            scores = mx.np.reshape((-1,) + self.out_shape)
+            scores = F.np.reshape((-1,) + self.out_shape)
         return scores
 
 
@@ -357,7 +357,7 @@ class BERTForTabularClassificationV1(HybridBlock):
         else:
             raise NotImplementedError
 
-    def forward(self, features):
+    def hybrid_forward(self, F, features):
         """
 
         Parameters
