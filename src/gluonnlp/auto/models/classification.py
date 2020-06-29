@@ -86,18 +86,17 @@ class CategoricalFeatureNet(HybridBlock):
             self.embedding = nn.Embedding(input_dim=num_class,
                                           output_dim=cfg.emb_units,
                                           weight_initializer=embed_initializer)
-            with self.name_scope():
-                self.proj = BasicMLP(in_units=cfg.emb_units,
-                                     mid_units=cfg.mid_units,
-                                     out_units=out_units,
-                                     num_layers=cfg.num_layers,
-                                     normalization=cfg.normalization,
-                                     norm_eps=cfg.norm_eps,
-                                     data_dropout=cfg.data_dropout,
-                                     dropout=cfg.dropout,
-                                     activation=cfg.activation,
-                                     weight_initializer=weight_initializer,
-                                     bias_initializer=bias_initializer)
+            self.proj = BasicMLP(in_units=cfg.emb_units,
+                                 mid_units=cfg.mid_units,
+                                 out_units=out_units,
+                                 num_layers=cfg.num_layers,
+                                 normalization=cfg.normalization,
+                                 norm_eps=cfg.norm_eps,
+                                 data_dropout=cfg.data_dropout,
+                                 dropout=cfg.dropout,
+                                 activation=cfg.activation,
+                                 weight_initializer=weight_initializer,
+                                 bias_initializer=bias_initializer)
 
     @staticmethod
     def get_cfg(key=None):
@@ -192,7 +191,6 @@ class FeatureAggregator(HybridBlock):
         bias_initializer = mx.init.create(*self.cfg.INITIALIZER.bias)
         out_units = int(np.prod(out_shape))
         with self.name_scope():
-            self.proj = nn.HybridSequential()
             if self.cfg.agg_type == 'mean':
                 in_units = in_units
             elif self.cfg.agg_type == 'concat':

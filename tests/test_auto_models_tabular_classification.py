@@ -7,7 +7,7 @@ from gluonnlp.auto.dataset import TabularDataset
 from gluonnlp.auto.preprocessing import TabularClassificationBERTPreprocessor
 from gluonnlp.cli.data.general_nlp_benchmark import prepare_glue
 from gluonnlp.auto.preprocessing import get_problem_type
-from gluonnlp.auto.models.tabular_classification import BERTForTabularClassificationV1
+from gluonnlp.auto.models.classification import BERTForTabularClassificationV1
 mx.npx.set_np()
 
 GLUE_TASKS_FOR_TEST = \

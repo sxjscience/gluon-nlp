@@ -1,1 +1,1 @@
-from . import tabular_classification
+from . import classification
