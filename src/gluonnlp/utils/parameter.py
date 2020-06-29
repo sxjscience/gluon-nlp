@@ -165,4 +165,4 @@ def move_to_ctx(arr, ctx):
     elif isinstance(arr, list):
         return [ele.as_in_ctx(ctx) if ele is not None else None for ele in arr]
     else:
-        return arr.as_in_ctx(ctx)
+        return None if arr is None else arr.as_in_ctx(ctx)
