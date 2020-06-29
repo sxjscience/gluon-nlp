@@ -439,9 +439,9 @@ def train(args):
             loss_string = ''
             for i, key in enumerate(sorted(metric_scores.keys())):
                 if i < len(metric_scores) - 1:
-                    loss_string += '{}={}, '
+                    loss_string += '{}={}, '.format(key, metric_scores[key])
                 else:
-                    loss_string += '{}={}'
+                    loss_string += '{}={}'.format(key, metric_scores[key])
             logging.info('[Iter {}/{}, Epoch {}] valid {}, time spent={}'.format(
                 update_idx, max_update, int(update_idx / updates_per_epoch),
                 loss_string, valid_time_spent))
