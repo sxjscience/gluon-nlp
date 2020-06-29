@@ -26,9 +26,9 @@ def get_problem_type(label_column_property):
         For regression problem, it will be the label shape.
     """
     if label_column_property.type == _C.CATEGORICAL:
-        return _C.REGRESSION, label_column_property.num_class
+        return _C.CLASSIFICATION, label_column_property.num_class
     elif label_column_property.type == _C.NUMERICAL:
-        return _C.CLASSIFICATION, label_column_property.shape
+        return _C.REGRESSION, label_column_property.shape
     else:
         raise NotImplementedError
 

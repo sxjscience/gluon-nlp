@@ -256,7 +256,7 @@ class FeatureAggregator(HybridBlock):
                 raise NotImplementedError
         scores = self.proj(agg_features)
         if len(self.out_shape) != 1:
-            scores = F.np.reshape((-1,) + self.out_shape)
+            scores = F.np.reshape(scores, (-1,) + self.out_shape)
         return scores
 
 
