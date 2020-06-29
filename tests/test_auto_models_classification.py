@@ -37,6 +37,7 @@ def test_bert_for_tabular_classification_v1():
                                       column_properties=train_dataset.column_properties)
     cfg, tokenizer, param_path, _ = get_pretrained_bert()
     backbone = BertModel.from_cfg(cfg)
+    backbone.load_parameters(param_path)
     column_properties = train_dataset.column_properties
     preprocessor = TabularClassificationBERTPreprocessor(tokenizer=tokenizer,
                                                          column_properties=column_properties,
@@ -50,8 +51,11 @@ def test_bert_for_tabular_classification_v1():
     model = BERTForTabularClassificationV1(text_backbone=backbone,
                                            feature_field_info=preprocessor.feature_field_info(),
                                            label_shape=label_shape)
+    model.hybridize()
+    model.initialize()
     train_dataloader = DataLoader(train_preprocessed, batch_size=2, shuffle=False,
                                   batchify_fn=preprocessor.batchify(is_test=False))
     dev_dataloader = DataLoader(dev_preprocessed, batch_size=2, shuffle=False,
                                 batchify_fn=preprocessor.batchify(is_test=True))
-
+    feature_batch, label_batch = next(iter(train_dataloader))
+    out = model(feature_batch)

@@ -13,7 +13,7 @@ class BasicMLP(HybridBlock):
                  mid_units,
                  out_units,
                  num_layers=1,
-                 normalization='batch_norm',
+                 normalization='layer_norm',
                  norm_eps=1E-5,
                  dropout=0.1,
                  data_dropout=False,
@@ -108,7 +108,7 @@ class CategoricalFeatureNet(HybridBlock):
             cfg.data_dropout = False
             cfg.dropout = 0.1
             cfg.activation = 'leaky'
-            cfg.normalization = 'batch_norm'
+            cfg.normalization = 'layer_norm'
             cfg.norm_eps = 1e-5
             cfg.INITIALIZER = CfgNode()
             cfg.INITIALIZER.embed = ['xavier', 'gaussian', 'in', 1.0]
@@ -160,7 +160,7 @@ class NumericalFeatureNet(HybridBlock):
             cfg.data_dropout = False
             cfg.dropout = 0.1
             cfg.activation = 'leaky'
-            cfg.normalization = 'batch_norm'
+            cfg.normalization = 'layer_norm'
             cfg.norm_eps = 1e-5
             cfg.INITIALIZER = CfgNode()
             cfg.INITIALIZER.weight = ['xavier', 'uniform', 'avg', 3.0]
@@ -220,7 +220,7 @@ class FeatureAggregator(HybridBlock):
             cfg.data_dropout = False
             cfg.dropout = 0.1
             cfg.activation = 'leaky'
-            cfg.normalization = 'batch_norm'
+            cfg.normalization = 'layer_norm'
             cfg.norm_eps = 1e-5
             cfg.INITIALIZER = CfgNode()
             cfg.INITIALIZER.weight = ['xavier', 'uniform', 'avg', 3.0]
