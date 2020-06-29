@@ -322,7 +322,7 @@ class BERTForTabularClassificationV1(HybridBlock):
                                                cfg=cfg.AGG_NET)
             self.categorical_networks = nn.HybridSequential()
             self.numerical_networks = nn.HybridSequential()
-            for i, (field_type_code, field_attrs) in enumerate(self.field_infos):
+            for i, (field_type_code, field_attrs) in enumerate(self.feature_field_info):
                 if field_type_code == _C.CATEGORICAL:
                     with self.categorical_networks.name_scope():
                         self.categorical_networks.add(
