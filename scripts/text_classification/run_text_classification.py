@@ -419,10 +419,10 @@ def train(args):
             log_loss = sum([ele.as_in_ctx(ctx_l[0]) for ele in log_loss_l]).asnumpy()
             log_num_samples = sum(log_num_samples_l)
             avg_log_loss = log_loss / log_num_samples * batch_size
-            logging.info('[Iter {}/{}, Epoch {}] train loss={}, gnorm={}, #samples processed={},'
+            logging.info('[Iter {}/{}, Epoch {}] train loss={}, gnorm={}, lr={}, #samples processed={},'
                          ' #sample per second={}'
                          .format(update_idx, max_update, int(update_idx / updates_per_epoch),
-                                 avg_log_loss, total_norm,
+                                 avg_log_loss, total_norm, trainer.learning_rate,
                                  log_num_samples,
                                  log_num_samples / (time.time() - logging_start_tick)))
             logging_start_tick = time.time()
