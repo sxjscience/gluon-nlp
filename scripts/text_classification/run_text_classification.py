@@ -406,7 +406,8 @@ def train(args):
                                   optimization_cfg.max_grad_norm * num_samples_per_update / batch_size)
         total_norm = total_norm / (num_samples_per_update / batch_size)
         trainer.update(num_samples_per_update / batch_size)
-        net.collect_params().zero_grad()
+        if optimization_cfg.num_accumulated > 1:
+            net.collect_params().zero_grad()
         if (update_idx + 1) % train_log_interval == 0:
             log_loss = sum([ele.as_in_ctx(ctx_l[0]) for ele in log_loss_l]).asnumpy()
             log_num_samples = sum(log_num_samples_l)
