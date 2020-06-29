@@ -429,12 +429,12 @@ def train(args):
                 log_num_samples_l[i] = 0
         if (update_idx + 1) % valid_interval == 0:
             valid_start_tick = time.time()
-            predictions, metric_scores = validate(net, dataloader=dev_dataloader,
-                                                  ctx_l=ctx_l,
-                                                  problem_type=problem_type)
+            predictions, gt_labels, metric_scores = validate(net, dataloader=dev_dataloader,
+                                                             ctx_l=ctx_l,
+                                                             problem_type=problem_type)
             valid_time_spent = time.time() - valid_start_tick
             np.savez_compressed('iter{}_prediction.npz'.format(update_idx),
-                                predictions=predictions, labels=dev_gt_labels)
+                                predictions=predictions, labels=gt_labels)
             loss_string = ''
             for i, key in enumerate(sorted(metric_scores.keys())):
                 if i < len(metric_scores) - 1:
