@@ -84,45 +84,45 @@ class Config:
         return cfg
 
 
-def get_optimizer(optimization_cfg, updates_per_epoch):
-    max_update = int(updates_per_epoch * optimization_cfg.num_train_epochs)
-    warmup_steps = int(updates_per_epoch * optimization_cfg.num_train_epochs
-                       * optimization_cfg.warmup_portion)
-    if optimization_cfg.lr_scheduler == 'poly_scheduler':
+def get_optimizer(cfg, updates_per_epoch):
+    max_update = int(updates_per_epoch * cfg.num_train_epochs)
+    warmup_steps = int(updates_per_epoch * cfg.num_train_epochs
+                       * cfg.warmup_portion)
+    if cfg.lr_scheduler == 'poly_scheduler':
         assert warmup_steps < max_update
         lr_scheduler = PolyScheduler(max_update=max_update,
-                                     base_lr=optimization_cfg.lr,
-                                     warmup_begin_lr=optimization_cfg.begin_lr,
+                                     base_lr=cfg.lr,
+                                     warmup_begin_lr=cfg.begin_lr,
                                      pwr=1,
-                                     final_lr=optimization_cfg.final_lr,
+                                     final_lr=cfg.final_lr,
                                      warmup_steps=warmup_steps,
                                      warmup_mode='linear')
-    elif optimization_cfg.lr_scheduler == 'inv_sqrt':
-        warmup_steps = int(updates_per_epoch * optimization_cfg.num_train_epochs
-                           * optimization_cfg.warmup_portion)
+    elif cfg.lr_scheduler == 'inv_sqrt':
+        warmup_steps = int(updates_per_epoch * cfg.num_train_epochs
+                           * cfg.warmup_portion)
         lr_scheduler = InverseSquareRootScheduler(warmup_steps=warmup_steps,
-                                                  base_lr=optimization_cfg.lr,
-                                                  warmup_init_lr=optimization_cfg.begin_lr)
-    elif optimization_cfg.lr_scheduler == 'constant':
+                                                  base_lr=cfg.lr,
+                                                  warmup_init_lr=cfg.begin_lr)
+    elif cfg.lr_scheduler == 'constant':
         lr_scheduler = None
-    elif optimization_cfg.lr_scheduler == 'cosine':
-        max_update = int(updates_per_epoch * optimization_cfg.num_train_epochs)
-        warmup_steps = int(updates_per_epoch * optimization_cfg.num_train_epochs
-                           * optimization_cfg.warmup_portion)
+    elif cfg.lr_scheduler == 'cosine':
+        max_update = int(updates_per_epoch * cfg.num_train_epochs)
+        warmup_steps = int(updates_per_epoch * cfg.num_train_epochs
+                           * cfg.warmup_portion)
         assert warmup_steps < max_update
         lr_scheduler = CosineScheduler(max_update=max_update,
-                                       base_lr=optimization_cfg.lr,
-                                       final_lr=optimization_cfg.final_lr,
+                                       base_lr=cfg.lr,
+                                       final_lr=cfg.final_lr,
                                        warmup_steps=warmup_steps,
-                                       warmup_begin_lr=optimization_cfg.begin_lr)
+                                       warmup_begin_lr=cfg.begin_lr)
     else:
         raise ValueError('Unsupported lr_scheduler="{}"'
-                         .format(optimization_cfg.lr_scheduler))
-    optimizer_params = {'learning_rate': args.lr,
-                        'wd': args.wd,
+                         .format(cfg.lr_scheduler))
+    optimizer_params = {'learning_rate': cfg.lr,
+                        'wd': cfg.wd,
                         'lr_scheduler': lr_scheduler}
-    optimizer = optimization_cfg.optimizer
-    additional_params = {key: value for key, value in optimization_cfg.optimizer_params}
+    optimizer = cfg.optimizer
+    additional_params = {key: value for key, value in cfg.optimizer_params}
     optimizer_params.update(additional_params)
     return optimizer, optimizer_params, max_update
 
