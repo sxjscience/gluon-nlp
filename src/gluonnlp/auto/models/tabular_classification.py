@@ -339,7 +339,6 @@ class BERTForTabularClassificationV1(HybridBlock):
 
     @staticmethod
     def get_cfg(key=None):
-        print('key=', str(key))
         if key is None:
             cfg = CfgNode()
             cfg.feature_units = -1  # -1 means not given and we will use the units of BERT
