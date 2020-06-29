@@ -386,7 +386,7 @@ def train(args):
                 with mx.autograd.record():
                     pred = net(feature_batch)
                     if problem_type == _C.CLASSIFICATION:
-                        logits = mx.npx.softmax(pred, axis=-1)
+                        logits = mx.npx.log_softmax(pred, axis=-1)
                         loss = - mx.npx.pick(logits, label_batch[0])
                     elif problem_type == _C.REGRESSION:
                         loss = mx.np.square(pred - label_batch[0])
