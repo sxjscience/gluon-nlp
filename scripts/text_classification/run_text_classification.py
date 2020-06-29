@@ -375,11 +375,11 @@ def train(args):
     log_num_samples_l = [0 for _ in ctx_l]
     logging_start_tick = time.time()
     for update_idx in range(max_update):
-        num_samples_l = [0 for _ in ctx_l]
+        num_samples_per_update_l = [0 for _ in ctx_l]
         for accum_idx in range(optimization_cfg.num_accumulated):
             sample_l = next(train_loop_dataloader)
             loss_l = []
-            for i, (sample, ctx) in enumerate(sample_l, ctx_l):
+            for i, (sample, ctx) in enumerate(zip(sample_l, ctx_l)):
                 feature_batch, label_batch = sample
                 feature_batch = move_to_ctx(feature_batch, ctx)
                 label_batch = move_to_ctx(label_batch, ctx)
@@ -391,12 +391,12 @@ def train(args):
                     elif problem_type == _C.REGRESSION:
                         loss = mx.np.square(pred - label_batch[0])
                     loss_l.append(loss.sum() / batch_size)
-                    num_samples_l[i] += np.prod(loss.shape)
+                    num_samples_per_update_l[i] += np.prod(loss.shape)
             for loss in loss_l:
                 loss.backward()
             for i in range(len(ctx_l)):
                 log_loss_l[i] += loss_l[i]
-                log_num_samples_l[i] += num_samples_l[i]
+                log_num_samples_l[i] += num_samples_per_update_l[i]
         # Begin to update
         trainer.allreduce_grads()
         # Here, the accumulated gradients are
@@ -405,12 +405,14 @@ def train(args):
         #   \frac{1}{N} \sum_{n=1}^N      -->  clip to args.max_grad_norm
         # We need to change the ratio to be
         #  \sum_{n=1}^N g_n / batch_size  -->  clip to args.max_grad_norm  * N / batch_size
-        num_samples_per_update = sum(num_samples_l)
+        num_samples_per_update = sum(num_samples_per_update_l)
         total_norm, ratio, is_finite =\
             clip_grad_global_norm(params,
                                   optimization_cfg.max_grad_norm * num_samples_per_update / batch_size)
         total_norm = total_norm / (num_samples_per_update / batch_size)
         trainer.update(num_samples_per_update / batch_size)
+
+        # Clear after update
         if optimization_cfg.num_accumulated > 1:
             net.collect_params().zero_grad()
         if (update_idx + 1) % train_log_interval == 0:
