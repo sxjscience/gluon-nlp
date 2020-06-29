@@ -426,9 +426,8 @@ def train(args):
                                  log_num_samples,
                                  log_num_samples / (time.time() - logging_start_tick)))
             logging_start_tick = time.time()
-            for i in range(len(ctx_l)):
-                log_loss_l[i][:] = 0
-                log_num_samples_l[i] = 0
+            log_loss_l = [mx.np.array(0.0, dtype=np.float32, ctx=ctx) for ctx in ctx_l]
+            log_num_samples_l = [0 for _ in ctx_l]
         if (update_idx + 1) % valid_interval == 0:
             valid_start_tick = time.time()
             predictions, gt_labels, metric_scores = validate(net, dataloader=dev_dataloader,
