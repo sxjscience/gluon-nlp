@@ -137,6 +137,8 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, help='Total batch_size', default=None)
     parser.add_argument('--num_accumulated', type=int, help='Num of gradient accumulation',
                         default=None)
+    parser.add_argument('--backbone_name', type=str, help='Name of the backbone model',
+                        default=None)
     parser.add_argument('--dev_file', type=str,
                         help='The validation pandas dataframe',
                         default=None)
@@ -317,6 +319,12 @@ def train(args):
                                  column_properties=train_dataset.column_properties)
     test_dataset = TabularDataset(test_df, columns=feature_columns,
                                   column_properties=train_dataset.column_properties)
+    logging.info('Train Dataset:')
+    logging.info(train_dataset)
+    logging.info('Dev Dataset:')
+    logging.info(dev_dataset)
+    logging.info('Test Dataset:')
+    logging.info(test_dataset)
     column_properties = train_dataset.column_properties
     label_column_property = column_properties[label_columns[0]]
     # Build Preprocessor + Preprocess the training dataset + Inference problem type
