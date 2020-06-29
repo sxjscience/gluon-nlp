@@ -208,14 +208,13 @@ def apply_layerwise_decay(model, layerwise_decay, not_included=None):
             value.lr_mult = layerwise_decay**(max_depth - layer_depth)
 
 
-def validate(net, dataloader, gt_label, ctx_l, problem_type, eval_metrics=None, pos_label=1):
+def validate(net, dataloader, ctx_l, problem_type, eval_metrics=None, pos_label=1):
     """
 
     Parameters
     ----------
     net
     dataloader
-    gt_label
     ctx_l
     problem_type
     eval_metrics
@@ -226,15 +225,20 @@ def validate(net, dataloader, gt_label, ctx_l, problem_type, eval_metrics=None, 
     Returns
     -------
     predictions
+    gt_label
     metric_scores
     """
     predictions = []
+    gt_labels = []
     metric_scores = dict()
     for sample_l in grouper(dataloader, len(ctx_l)):
         iter_pred_l = []
-        for batch_feature, ctx in zip(sample_l, ctx_l):
-            if batch_feature is None:
+        iter_label_l = []
+        for sample, ctx in zip(sample_l, ctx_l):
+            if sample is None:
                 continue
+            batch_feature, batch_label = sample
+            iter_label_l.append(batch_label)
             batch_feature = move_to_ctx(batch_feature, ctx)
             pred = net(batch_feature)
             if problem_type == _C.CLASSIFICATION:
@@ -242,7 +246,10 @@ def validate(net, dataloader, gt_label, ctx_l, problem_type, eval_metrics=None, 
             iter_pred_l.append(pred)
         for pred in iter_pred_l:
             predictions.append(pred.asnumpy())
-    predictions = np.stack(predictions, axis=0)
+        for label in iter_label_l:
+            gt_labels.append(label.asnumpy())
+    predictions = np.concatenate(predictions, axis=0)
+    gt_labels = np.concatenate(gt_labels, axis=0)
     if eval_metrics is None:
         if problem_type == _C.CLASSIFICATION:
             eval_metrics = ['acc', 'f1', 'mcc', 'auc', 'nll']
@@ -252,21 +259,21 @@ def validate(net, dataloader, gt_label, ctx_l, problem_type, eval_metrics=None, 
             raise NotImplementedError
     for metric_name in eval_metrics:
         if metric_name == 'acc':
-            metric_scores[metric_name] = accuracy_score(gt_label, predictions.argmax(axis=-1))
+            metric_scores[metric_name] = accuracy_score(gt_labels, predictions.argmax(axis=-1))
         elif metric_name == 'f1':
-            metric_scores[metric_name] = f1_score(gt_label, predictions.argmax(axis=-1),
+            metric_scores[metric_name] = f1_score(gt_labels, predictions.argmax(axis=-1),
                                                   pos_label=pos_label)
         elif metric_name == 'mcc':
-            metric_scores[metric_name] = matthews_corrcoef(gt_label, predictions.argmax(axis=-1))
+            metric_scores[metric_name] = matthews_corrcoef(gt_labels, predictions.argmax(axis=-1))
         elif metric_name == 'auc':
-            metric_scores[metric_name] = roc_auc_score(gt_label, predictions[:, pos_label])
+            metric_scores[metric_name] = roc_auc_score(gt_labels, predictions[:, pos_label])
         elif metric_name == 'nll':
-            metric_scores[metric_name] = - np.log(predictions[np.arange(gt_label.shape[0]),
-                                                              gt_label]).mean()
+            metric_scores[metric_name] = - np.log(predictions[np.arange(gt_labels.shape[0]),
+                                                              gt_labels]).mean()
         elif metric_name == 'pearsonr':
-            metric_scores[metric_name] = pearsonr(gt_label, predictions)
+            metric_scores[metric_name] = pearsonr(gt_labels, predictions)
         elif metric_name == 'mse':
-            metric_scores[metric_name] = np.square(predictions - gt_label).mean()
+            metric_scores[metric_name] = np.square(predictions - gt_labels).mean()
         else:
             raise ValueError('Unknown metric = {}'.format(metric_name))
     return predictions, metric_scores
@@ -311,7 +318,7 @@ def train(args):
     test_dataset = TabularDataset(test_df, columns=feature_columns,
                                   column_properties=train_dataset.column_properties)
     column_properties = train_dataset.column_properties
-
+    label_column_property = column_properties[label_columns[0]]
     # Build Preprocessor + Preprocess the training dataset + Inference problem type
     preprocessor = TabularClassificationBERTPreprocessor(tokenizer=tokenizer,
                                                          column_properties=column_properties,
@@ -320,7 +327,7 @@ def train(args):
     processed_train = preprocessor.process_train(train_dataset.table)
     processed_dev = preprocessor.process_train(dev_dataset.table)
     processed_test = preprocessor.process_test(test_dataset.table)
-    problem_type, label_shape = infer_problem_type(column_properties[label_columns[0]])
+    problem_type, label_shape = infer_problem_type(label_column_property)
 
     batch_size = optimization_cfg.batch_size // len(ctx_l) // optimization_cfg.num_accumulated
     inference_batch_size = batch_size * optimization_cfg.val_batch_size_mult
@@ -328,9 +335,7 @@ def train(args):
     train_dataloader = DataLoader(processed_train, batch_size=batch_size,
                                   shuffle=True, batchify_fn=preprocessor.batchify(is_test=False))
     dev_dataloader = DataLoader(processed_dev, batch_size=inference_batch_size,
-                                shuffle=False, batchify_fn=preprocessor.batchify(is_test=True))
-    dev_gt_labels = np.concatenate([label_batch[0].asnumpy() for _, label_batch in processed_dev],
-                                   axis=0)
+                                shuffle=False, batchify_fn=preprocessor.batchify(is_test=False))
     test_dataloader = DataLoader(processed_test, batch_size=inference_batch_size,
                                  shuffle=False, batchify_fn=preprocessor.batchify(is_test=True))
     # Build the network
@@ -425,7 +430,6 @@ def train(args):
         if (update_idx + 1) % valid_interval == 0:
             valid_start_tick = time.time()
             predictions, metric_scores = validate(net, dataloader=dev_dataloader,
-                                                  gt_label=dev_gt_labels,
                                                   ctx_l=ctx_l,
                                                   problem_type=problem_type)
             valid_time_spent = time.time() - valid_start_tick
