@@ -216,7 +216,7 @@ class FeatureAggregator(HybridBlock):
             cfg = CfgNode()
             cfg.agg_type = 'concat'
             cfg.mid_units = -1
-            cfg.num_layers = 1
+            cfg.num_layers = 0
             cfg.data_dropout = False
             cfg.dropout = 0.1
             cfg.activation = 'tanh'
