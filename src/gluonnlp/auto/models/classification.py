@@ -303,6 +303,7 @@ class BERTForTabularClassificationV1(HybridBlock):
         if cfg is None:
             cfg = BERTForTabularClassificationV1.get_cfg()
         self.cfg = BERTForTabularClassificationV1.get_cfg().clone_merge(cfg)
+        assert self.cfg.TEXT_NET.pool_type == 'cls'
         feature_units = self.cfg.feature_units
         if feature_units == -1:
             feature_units = text_backbone.units
@@ -382,7 +383,6 @@ class BERTForTabularClassificationV1(HybridBlock):
                 else:
                     contextual_embedding = self.text_backbone(batch_token_ids, batch_valid_length)
                     pooled_output = contextual_embedding[:, 0, :]
-                assert self.TEXT_NET.pool_type == 'cls'
                 text_contextual_features[i] = contextual_embedding
                 field_features.append(pooled_output)
             elif field_type_code == _C.ENTITY:
