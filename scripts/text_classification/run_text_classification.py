@@ -475,7 +475,6 @@ def train(args):
             if problem_type == _C.CLASSIFICATION:
                 if metric_scores['nll'] < best_loss:
                     best_loss = metric_scores['nll']
-                    logging.info('Find better valid!')
                     is_best = True
                 else:
                     is_best = False
@@ -485,6 +484,11 @@ def train(args):
                     is_best = True
                 else:
                     is_best = False
+            else:
+                raise NotImplementedError
+            if is_best:
+                logging.info('Find better validation score!')
+                net.save_parameters(os.path.join(args.save_dir, 'best_model.params'))
             loss_string = ''
             for i, key in enumerate(sorted(metric_scores.keys())):
                 if i < len(metric_scores) - 1:
