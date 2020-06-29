@@ -52,7 +52,7 @@ class OptimizationV1Config:
         cfg.final_lr = 0.0
         cfg.num_train_epochs = 3.0
         cfg.warmup_portion = 0.1
-        cfg.layerwise_lr_decay = 0.9  # The layer_wise decay
+        cfg.layerwise_lr_decay = 0.8  # The layer_wise decay
         cfg.wd = 0.01  # Weight Decay
         cfg.max_grad_norm = 1.0 # Maximum Gradient Norm
         # The validation frequency = validation frequency * num_updates_in_an_epoch
