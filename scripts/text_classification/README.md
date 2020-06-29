@@ -24,6 +24,6 @@ python run_text_classification.py \
      --test_file ${TEST_FILE} \
      --task ${TASK} \
      --batch_size 32 \
-     --num_accumulated 2 \
+     --num_accumulated 1 \
      --gpus 0,1,2,3
 ```

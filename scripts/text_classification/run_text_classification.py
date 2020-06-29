@@ -276,7 +276,7 @@ def validate(net, dataloader, ctx_l, problem_type, eval_metrics=None, pos_label=
             metric_scores[metric_name] = np.square(predictions - gt_labels).mean()
         else:
             raise ValueError('Unknown metric = {}'.format(metric_name))
-    return predictions, metric_scores
+    return predictions, gt_labels, metric_scores
 
 
 def train(args):
