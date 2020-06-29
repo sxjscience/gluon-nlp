@@ -6,6 +6,7 @@ from .. import constants as _C
 from ...utils.config import CfgNode
 from ...layers import get_activation, get_norm_layer
 
+
 @use_np
 class BasicMLP(HybridBlock):
     def __init__(self, in_units,
@@ -74,7 +75,10 @@ class CategoricalFeatureNet(HybridBlock):
     def __init__(self, num_class, out_units, cfg=None, prefix=None, params=None):
         super().__init__(prefix=prefix, params=params)
         if cfg is None:
-            cfg = self.get_cfg()
+            cfg = CategoricalFeatureNet.get_cfg()
+        else:
+            cfg = CategoricalFeatureNet.get_cfg().clone_merge(cfg)
+        self.cfg = cfg
         embed_initializer = mx.init.create(*cfg.INITIALIZER.embed)
         weight_initializer = mx.init.create(*cfg.INITIALIZER.weight)
         bias_initializer = mx.init.create(*cfg.INITIALIZER.bias)
@@ -125,10 +129,10 @@ class NumericalFeatureNet(HybridBlock):
     def __init__(self, input_shape, out_units, cfg=None, prefix=None, params=None):
         super().__init__(prefix=prefix, params=params)
         if cfg is None:
-            cfg = self.get_cfg()
+            cfg = NumericalFeatureNet.get_cfg()
         self.input_shape = input_shape
         self.in_units = int(np.prod(input_shape))
-        self.cfg = cfg
+        self.cfg = NumericalFeatureNet.get_cfg().clone_merge(cfg)
         weight_initializer = mx.init.create(*cfg.INITIALIZER.weight)
         bias_initializer = mx.init.create(*cfg.INITIALIZER.bias)
         with self.name_scope():
@@ -179,8 +183,8 @@ class FeatureAggregator(HybridBlock):
                  cfg=None, prefix=None, params=None):
         super().__init__(prefix=prefix, params=params)
         if cfg is None:
-            cfg = self.get_cfg()
-        self.cfg = cfg
+            cfg = FeatureAggregator.get_cfg()
+        self.cfg = FeatureAggregator.get_cfg().clone_merge(cfg)
         self.num_fields = num_fields
         self.out_shape = out_shape
         self.in_units = in_units
@@ -298,8 +302,8 @@ class BERTForTabularClassificationV1(HybridBlock):
         """
         super().__init__(prefix=prefix, params=params)
         if cfg is None:
-            cfg = self.get_cfg()
-        self.cfg = cfg
+            cfg = BERTForTabularClassificationV1.get_cfg()
+        self.cfg = BERTForTabularClassificationV1.get_cfg().clone_merge(cfg)
         feature_units = self.cfg.feature_units
         if feature_units == -1:
             feature_units = text_backbone.units
@@ -335,6 +339,7 @@ class BERTForTabularClassificationV1(HybridBlock):
 
     @staticmethod
     def get_cfg(key=None):
+        print('key=', str(key))
         if key is None:
             cfg = CfgNode()
             cfg.feature_units = -1  # -1 means not given and we will use the units of BERT
