@@ -161,7 +161,7 @@ def clip_grad_global_norm(parameters: Iterable[Parameter],
 @use_np
 def move_to_ctx(arr, ctx):
     if isinstance(arr, tuple):
-        return tuple(ele.as_in_ctx(ctx) if ele is not None else None for ele in arr)
+        return tuple([ele.as_in_ctx(ctx) if ele is not None else None for ele in arr])
     elif isinstance(arr, list):
         return [ele.as_in_ctx(ctx) if ele is not None else None for ele in arr]
     else:
