@@ -7,7 +7,8 @@ import functools
 from mxnet.gluon import nn
 import numpy as np
 from numpy.testing import assert_allclose
-from gluonnlp.utils.misc import AverageSGDTracker, download, sha1sum, num_mp_workers
+from gluonnlp.utils.misc import AverageSGDTracker, download, sha1sum, num_mp_workers,\
+                                grouper, repeat
 mx.npx.set_np()
 
 
@@ -111,3 +112,42 @@ def test_download_https(overwrite):
 
 def test_num_mp_workers():
     assert 1 <= num_mp_workers(4) <= 4
+
+
+def test_grouper():
+    class Foo:
+        def __iter__(self):
+            for i in range(10):
+                yield i
+    foo = Foo()
+    sample_l = []
+    for sample in grouper(foo, 3):
+        sample_l.append(sample)
+    assert sample_l == [(0, 1, 2), (3, 4, 5), (6, 7, 8), (9, None, None)]
+
+
+def test_repeat():
+    class Foo:
+        def __iter__(self):
+            for i in range(10):
+                yield np.random.normal()
+
+        def __len__(self):
+            return 10
+    foo = Foo()
+    sample_l = []
+    for i, sample in enumerate(repeat(foo)):
+        if i > 30:
+            break
+        sample_l.append(sample)
+    first_samples_set = set([sample_l[i] for i in range(10)])
+    non_exist = 0
+    for i in range(11, 20):
+        non_exist += sample_l[i] not in first_samples_set
+    assert non_exist > 5
+
+    repeat_foo_with_count = repeat(foo, 5)
+    sample_l = []
+    for sample in repeat_foo_with_count:
+        sample_l.append(sample)
+    assert len(sample_l) == 50

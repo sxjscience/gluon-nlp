@@ -78,8 +78,21 @@ OPTIMIZATION:
   lr: 0.0001
   lr_scheduler: poly_scheduler
   max_grad_norm: 1.0
+  num_accumulated: 1
   num_train_epochs: 3.0
+  optimizer: adamw
+  optimizer_params:
+  - - beta1
+    - 0.9
+  - - beta2
+    - 0.999
+  - - epsilon
+    - 1.0e-06
+  - - correct_bias
+    - false
+  val_batch_size_mult: 2
   version: v1
   warmup_portion: 0.1
   wd: 0.01
-version: 1
+SEED: 123
+VERSION: 1
