@@ -165,7 +165,7 @@ def parse_args():
     parser.add_argument('--save_dir', type=str,
                         help='The directory to save the experiment',
                         default=None)
-    parser.add_argument('--eval_metric', type=str,
+    parser.add_argument('--eval_metrics', type=str,
                         help='The metrics for evaluating the models.',
                         default=None)
     parser.add_argument('--stop_metric', type=str,
