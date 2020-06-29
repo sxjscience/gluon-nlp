@@ -2,11 +2,11 @@ import numpy as np
 import mxnet as mx
 from mxnet.gluon import nn, HybridBlock
 from mxnet.util import use_np
-from . import constants as _C
-from ..utils.config import CfgNode
-from ..layers import get_activation, get_norm_layer
+from .. import constants as _C
+from ...utils.config import CfgNode
+from ...layers import get_activation, get_norm_layer
 
-
+@use_np
 class BasicMLP(HybridBlock):
     def __init__(self, in_units,
                  mid_units,
@@ -69,6 +69,7 @@ class BasicMLP(HybridBlock):
         return self.proj(x)
 
 
+@use_np
 class CategoricalFeatureNet(HybridBlock):
     def __init__(self, num_class, out_units, cfg=None, prefix=None, params=None):
         super().__init__(prefix=prefix, params=params)
@@ -119,6 +120,7 @@ class CategoricalFeatureNet(HybridBlock):
         return self.proj(embed)
 
 
+@use_np
 class NumericalFeatureNet(HybridBlock):
     def __init__(self, input_shape, out_units, cfg=None, prefix=None, params=None):
         super().__init__(prefix=prefix, params=params)
@@ -171,6 +173,7 @@ class NumericalFeatureNet(HybridBlock):
         return self.proj(feature)
 
 
+@use_np
 class FeatureAggregator(HybridBlock):
     def __init__(self, num_fields, out_shape, in_units,
                  cfg=None, prefix=None, params=None):
@@ -273,9 +276,7 @@ class BERTForTabularClassificationV1(HybridBlock):
     """
     def __init__(self, text_backbone,
                  feature_field_info,
-                 num_class=None,
                  label_shape=None,
-                 problem_type=_C.CLASSIFICATION,
                  cfg=None,
                  prefix=None,
                  params=None):
@@ -288,12 +289,8 @@ class BERTForTabularClassificationV1(HybridBlock):
         feature_field_info
             The field information of the training data. Each will be a tuple:
             - (field_type, attributes)
-        num_class
-            The number of classes. Must be specified if the problem type is 'classification'
         label_shape
-            The shape of the label. If we need a scalar, it will be an empty tuple "()".
-        problem_type
-            The type of the problem
+            The shape of the label/number of classes. If we need a scalar, it will be an empty tuple "()".
         cfg
             The configuration of the network
         prefix
@@ -306,16 +303,12 @@ class BERTForTabularClassificationV1(HybridBlock):
         feature_units = self.cfg.feature_units
         if feature_units == -1:
             feature_units = text_backbone.units
-        if problem_type == _C.CLASSIFICATION:
-            assert num_class is not None, '"num_class" must be set if the problem type is' \
-                                          ' classification!'
-            out_shape = (num_class,)
-        elif problem_type == _C.REGRESSION:
-            if label_shape is None:
-                label_shape = ()
-            out_shape = label_shape
+        if isinstance(label_shape, int):
+            out_shape = (label_shape,)
+        elif label_shape is None:
+            out_shape = ()
         else:
-            raise NotImplementedError('The problem is not supported!')
+            out_shape = label_shape
         with self.name_scope():
             self.text_backbone = text_backbone
             self.feature_field_info = feature_field_info
@@ -340,9 +333,12 @@ class BERTForTabularClassificationV1(HybridBlock):
                             NumericalFeatureNet(input_shape=field_attrs['prop'].shape,
                                                 out_units=feature_units))
 
-    @classmethod
-    def get_cfg(cls, key=None):
+    @staticmethod
+    def get_cfg(key=None):
+        print('key is None=', key is None, str(key))
+        ch = input()
         if key is None:
+            print('Run here!')
             cfg = CfgNode()
             cfg.feature_units = -1  # -1 means not given and we will use the units of BERT
             # TODO(sxjscience) Use a class to store the TextNet
@@ -390,7 +386,7 @@ class BERTForTabularClassificationV1(HybridBlock):
                 text_contextual_features[i] = contextual_embedding
                 field_features.append(pooled_output)
             elif field_type_code == _C.ENTITY:
-                # TODO Implement via segment-sum
+                # TODO Implement via segment-pool
                 raise NotImplementedError('Currently not supported')
             elif field_type_code == _C.CATEGORICAL:
                 batch_sample = features[i]

@@ -1,13 +1,13 @@
-import multiprocessing as mp
 import pytest
 import mxnet as mx
-from mxnet.gluon.data import ArrayDataset, DataLoader
+from mxnet.gluon.data import DataLoader
 from gluonnlp.models.bert import get_pretrained_bert
 from gluonnlp.auto.dataset import TabularDataset
 from gluonnlp.auto.preprocessing import TabularClassificationBERTPreprocessor
 from gluonnlp.utils.testing import autonlp_snli_testdata
 from gluonnlp.utils.preprocessing import convert_token_level_span_to_char
 from gluonnlp.auto import constants as _C
+mx.npx.set_np()
 
 test_snli_df, test_snli_metadata = autonlp_snli_testdata()
 

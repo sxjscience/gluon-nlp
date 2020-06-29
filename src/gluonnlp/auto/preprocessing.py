@@ -10,6 +10,29 @@ from ..utils.misc import num_mp_workers
 from . import constants as _C
 
 
+def get_problem_type(label_column_property):
+    """
+
+    Parameters
+    ----------
+    label_column_property
+
+    Returns
+    -------
+    problem_type
+        classification or regression
+    problem_label_shape
+        For classification problem it will be the number of classes.
+        For regression problem, it will be the label shape.
+    """
+    if label_column_property.type == _C.CATEGORICAL:
+        return _C.REGRESSION, label_column_property.num_class
+    elif label_column_property.type == _C.NUMERICAL:
+        return _C.CLASSIFICATION, label_column_property.shape
+    else:
+        raise NotImplementedError
+
+
 def _chunk_processor(chunk, processing_fn):
     out = []
     for idx, row in chunk.iterrows():

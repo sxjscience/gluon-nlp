@@ -252,9 +252,9 @@ class TransformerXLForLM(Block):
     def __init__(self, cfg=None, prefix=None, params=None):
         super().__init__(prefix=prefix, params=params)
         if cfg is None:
-            cfg = TransformerXLForLM.get_cfg()
+            cfg = self.get_cfg()
         else:
-            cfg = TransformerXLForLM.get_cfg().clone_merge(cfg)
+            cfg = self.get_cfg().clone_merge(cfg)
         self._cfg = cfg
         assert cfg.MODEL.vocab_size > 0
         weight_initializer = mx.init.create(*cfg.INITIALIZER.weight)
@@ -321,8 +321,8 @@ class TransformerXLForLM(Block):
     def mem_length(self):
         return self.cfg.MODEL.mem_length
 
-    @classmethod
-    def get_cfg(cls, key=None):
+    @staticmethod
+    def get_cfg(key=None):
         if key is None:
             config = CN()
             config.MODEL = CN()
