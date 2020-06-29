@@ -197,8 +197,9 @@ class FeatureAggregator(HybridBlock):
                 in_units = in_units * num_fields
             else:
                 raise NotImplementedError
+            mid_units = in_units if cfg.mid_units < 0 else cfg.mid_units
             self.proj = BasicMLP(in_units=in_units,
-                                 mid_units=cfg.mid_units,
+                                 mid_units=mid_units,
                                  out_units=out_units,
                                  num_layers=cfg.num_layers,
                                  normalization=cfg.normalization,
@@ -214,7 +215,7 @@ class FeatureAggregator(HybridBlock):
         if key is None:
             cfg = CfgNode()
             cfg.agg_type = 'concat'
-            cfg.mid_units = 128
+            cfg.mid_units = -1
             cfg.num_layers = 1
             cfg.data_dropout = False
             cfg.dropout = 0.1
