@@ -1,0 +1,85 @@
+MODEL:
+  BACKBONE:
+    max_length: 128
+    name: google_electra_base
+  TABULAR_CLASSIFICATION:
+    AGG_NET:
+      INITIALIZER:
+        bias:
+        - zeros
+        weight:
+        - xavier
+        - uniform
+        - avg
+        - 3.0
+      activation: tanh
+      agg_type: concat
+      data_dropout: false
+      dropout: 0.1
+      mid_units: -1
+      norm_eps: 1.0e-05
+      normalization: layer_norm
+      num_layers: 1
+    CATEGORICAL_NET:
+      INITIALIZER:
+        bias:
+        - zeros
+        embed:
+        - xavier
+        - gaussian
+        - in
+        - 1.0
+        weight:
+        - xavier
+        - uniform
+        - avg
+        - 3.0
+      activation: leaky
+      data_dropout: false
+      dropout: 0.1
+      emb_units: 64
+      mid_units: 128
+      norm_eps: 1.0e-05
+      normalization: layer_norm
+      num_layers: 1
+    INITIALIZER:
+      bias:
+      - zeros
+      weight:
+      - truncnorm
+      - 0
+      - 0.02
+    NUMERICAL_NET:
+      INITIALIZER:
+        bias:
+        - zeros
+        weight:
+        - xavier
+        - uniform
+        - avg
+        - 3.0
+      activation: leaky
+      data_dropout: false
+      dropout: 0.1
+      input_centering: false
+      mid_units: 128
+      norm_eps: 1.0e-05
+      normalization: layer_norm
+      num_layers: 1
+    TEXT_NET:
+      pool_type: cls
+      use_segment_id: true
+    feature_units: -1
+OPTIMIZATION:
+  batch_size: 32
+  begin_lr: 0.0
+  final_lr: 0.0
+  layerwise_lr_decay: 0.9
+  lr: 0.0001
+  lr_scheduler: poly_scheduler
+  max_grad_norm: 1.0
+  num_train_epochs: 3.0
+  version: v1
+  warmup_portion: 0.1
+  wd: 0.01
+version: 1

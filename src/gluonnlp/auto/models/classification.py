@@ -219,7 +219,7 @@ class FeatureAggregator(HybridBlock):
             cfg.num_layers = 1
             cfg.data_dropout = False
             cfg.dropout = 0.1
-            cfg.activation = 'leaky'
+            cfg.activation = 'tanh'
             cfg.normalization = 'layer_norm'
             cfg.norm_eps = 1e-5
             cfg.INITIALIZER = CfgNode()

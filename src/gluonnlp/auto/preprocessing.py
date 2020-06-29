@@ -10,8 +10,8 @@ from ..utils.misc import num_mp_workers
 from . import constants as _C
 
 
-def get_problem_type(label_column_property):
-    """
+def infer_problem_type(label_column_property):
+    """Infer the type of the problem based on the column property
 
     Parameters
     ----------
