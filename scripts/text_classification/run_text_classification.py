@@ -423,8 +423,8 @@ def train(args):
                         loss = - mx.npx.pick(logits, label_batch[0])
                     elif problem_type == _C.REGRESSION:
                         loss = mx.np.square(pred - label_batch[0])
-                    loss_l.append(loss.sum() / batch_size)
-                    num_samples_per_update_l[i] += np.prod(loss.shape)
+                    loss_l.append(loss.sum())
+                    num_samples_per_update_l[i] += loss.shape[0]
             for loss in loss_l:
                 loss.backward()
             for i in range(len(ctx_l)):
@@ -441,9 +441,9 @@ def train(args):
         num_samples_per_update = sum(num_samples_per_update_l)
         total_norm, ratio, is_finite =\
             clip_grad_global_norm(params,
-                                  optimization_cfg.max_grad_norm * num_samples_per_update / batch_size)
-        total_norm = total_norm / (num_samples_per_update / batch_size)
-        trainer.update(num_samples_per_update / batch_size)
+                                  optimization_cfg.max_grad_norm * num_samples_per_update)
+        total_norm = total_norm / num_samples_per_update
+        trainer.update(num_samples_per_update)
 
         # Clear after update
         if optimization_cfg.num_accumulated > 1:
@@ -465,7 +465,8 @@ def train(args):
             valid_start_tick = time.time()
             predictions, gt_labels, metric_scores = validate(net, dataloader=dev_dataloader,
                                                              ctx_l=ctx_l,
-                                                             problem_type=problem_type)
+                                                             problem_type=problem_type,
+                                                             eval_metrics=eval_metrics)
             valid_time_spent = time.time() - valid_start_tick
             np.savez_compressed('iter{}_prediction.npz'.format(update_idx),
                                 predictions=predictions, labels=gt_labels)
