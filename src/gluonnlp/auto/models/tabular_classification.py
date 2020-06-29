@@ -95,8 +95,8 @@ class CategoricalFeatureNet(HybridBlock):
                                      weight_initializer=weight_initializer,
                                      bias_initializer=bias_initializer)
 
-    @classmethod
-    def get_cfg(cls, key=None):
+    @staticmethod
+    def get_cfg(key=None):
         if key is None:
             cfg = CfgNode()
             cfg.emb_units = 64
@@ -147,8 +147,8 @@ class NumericalFeatureNet(HybridBlock):
                                  weight_initializer=weight_initializer,
                                  bias_initializer=bias_initializer)
 
-    @classmethod
-    def get_cfg(cls, key=None):
+    @staticmethod
+    def get_cfg(key=None):
         if key is None:
             cfg = CfgNode()
             cfg.input_centering = False
@@ -207,8 +207,8 @@ class FeatureAggregator(HybridBlock):
                                  weight_initializer=weight_initializer,
                                  bias_initializer=bias_initializer)
 
-    @classmethod
-    def get_cfg(cls, key=None):
+    @staticmethod
+    def get_cfg(key=None):
         if key is None:
             cfg = CfgNode()
             cfg.agg_type = 'concat'
