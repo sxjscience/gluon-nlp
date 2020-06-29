@@ -262,8 +262,8 @@ class TabularClassificationBERTPreprocessor:
         if feature_columns is not None:
             self._feature_columns = feature_columns
         else:
-            self._feature_columns = [key for key in sorted(self._column_properties.keys())
-                                     if key not in self._label_columns]
+            self._feature_columns = [key
+                                     for key in self._column_properties.keys() if key not in self._label_columns]
         self._max_length = max_length
         self._merge_text = merge_text
         self._store_token_offsets = store_token_offsets
