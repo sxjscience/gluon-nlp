@@ -238,7 +238,7 @@ def validate(net, dataloader, ctx_l, problem_type, eval_metrics=None, pos_label=
             if sample is None:
                 continue
             batch_feature, batch_label = sample
-            iter_label_l.append(batch_label)
+            iter_label_l.append(batch_label[0])
             batch_feature = move_to_ctx(batch_feature, ctx)
             pred = net(batch_feature)
             if problem_type == _C.CLASSIFICATION:
