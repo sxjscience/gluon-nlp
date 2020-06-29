@@ -335,10 +335,7 @@ class BERTForTabularClassificationV1(HybridBlock):
 
     @staticmethod
     def get_cfg(key=None):
-        print('key is None=', key is None, str(key))
-        ch = input()
         if key is None:
-            print('Run here!')
             cfg = CfgNode()
             cfg.feature_units = -1  # -1 means not given and we will use the units of BERT
             # TODO(sxjscience) Use a class to store the TextNet
