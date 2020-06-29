@@ -371,7 +371,7 @@ class BERTForTabularClassificationV1(HybridBlock):
         text_contextual_features = dict()
         categorical_count = 0
         numerical_count = 0
-        for i, (field_type_code, field_attrs) in enumerate(self.field_infos):
+        for i, (field_type_code, field_attrs) in enumerate(self.feature_field_info):
             if field_type_code == _C.TEXT:
                 batch_token_ids, batch_valid_length, batch_segment_ids, _ = features[i]
                 if self.cfg.TEXT_NET.use_segment_id:
