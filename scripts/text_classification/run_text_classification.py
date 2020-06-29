@@ -468,7 +468,8 @@ def train(args):
                                                              problem_type=problem_type,
                                                              eval_metrics=eval_metrics)
             valid_time_spent = time.time() - valid_start_tick
-            np.savez_compressed('iter{}_prediction.npz'.format(update_idx),
+            np.savez_compressed(os.path.join(args.save_dir,
+                                             'iter{}_prediction.npz'.format(update_idx)),
                                 predictions=predictions, labels=gt_labels)
             loss_string = ''
             for i, key in enumerate(sorted(metric_scores.keys())):
