@@ -286,15 +286,19 @@ def train(args):
     all_cfg = Config.get_cfg()
     if args.config_file is not None:
         all_cfg = all_cfg.clone_merge(args.config_file)
-    if args.batch_size is not None or args.num_accumulated is not None:
+    if args.batch_size is not None or args.num_accumulated is not None\
+            or args.backbone_name is not None:
         all_cfg.defrost()
         if args.batch_size is not None:
             all_cfg.OPTIMIZATION.batch_size = args.batch_size
         if args.num_accumulated is not None:
             all_cfg.OPTIMIZATION.num_accumulated = args.num_accumulated
+        if args.backbone_name is not None:
+            all_cfg.MODEL.BACKBONE.name = args.backbone_name
         all_cfg.freeze()
     if args.save_dir is None:
         args.save_dir = '{}_{}'.format(args.task, all_cfg.MODEL.BACKBONE.name)
+
     logging_config(args.save_dir, name='text_classification')
     set_seed(all_cfg.SEED)
     with open(os.path.join(args.save_dir, 'cfg.yml'), 'w') as f:
