@@ -69,16 +69,16 @@ class AdamW(optimizer.Optimizer):
         Exponential decay rate for the second moment estimates.
     epsilon : float, default 1e-6
         Small value to avoid division by 0.
-    correct_bias : bool, default True
-       Can be set to False to avoid correcting bias in Adam (e.g. like in Bert TF repository).
-       Default True.
+    correct_bias : bool, default False
+       By default, we set it to False to avoid correcting bias in Adam
+       (like in Bert TF repository).
     use_fused_step : bool, default True
         Whether or not to use fused kernels for optimizer.
         When use_fused_step=False, step is called,
         otherwise, fused_step is called.
     """
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-6,
-                 correct_bias=True, use_fused_step=True, **kwargs):
+                 correct_bias=False, use_fused_step=True, **kwargs):
         super(AdamW, self).__init__(use_fused_step=use_fused_step,
                                     learning_rate=learning_rate,
                                     **kwargs)

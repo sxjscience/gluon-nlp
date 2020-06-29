@@ -54,11 +54,12 @@ class OptimizationV1Config:
         cfg.warmup_portion = 0.1
         cfg.layerwise_lr_decay = 0.8  # The layer_wise decay
         cfg.wd = 0.01  # Weight Decay
-        cfg.max_grad_norm = 1.0 # Maximum Gradient Norm
+        cfg.max_grad_norm = 1.0  # Maximum Gradient Norm
         # The validation frequency = validation frequency * num_updates_in_an_epoch
-        cfg.valid_frequency = 0.1
+        cfg.valid_frequency = 0.2
         # Logging frequency = log frequency * num_updates_in_an_epoch
         cfg.log_frequency = 0.05
+        cfg.stop_metrics = []
         return cfg
 
 
@@ -71,6 +72,17 @@ class TabularModelV1Config:
         cfg.BACKBONE.name = 'google_electra_base'
         cfg.TABULAR_CLASSIFICATION = BERTForTabularClassificationV1.get_cfg()
         return cfg
+
+
+class TaskConfig:
+    @staticmethod
+    def get_cfg():
+        cfg = CfgNode()
+        cfg.train_file = ''
+        cfg.dev_file = ''
+        cfg.test_file = ''
+        cfg.metadata = ''
+        cfg.eval_metric = ''
 
 
 class Config:
@@ -254,13 +266,6 @@ def validate(net, dataloader, ctx_l, problem_type, eval_metrics=None, pos_label=
             gt_labels.append(label.asnumpy())
     predictions = np.concatenate(predictions, axis=0)
     gt_labels = np.concatenate(gt_labels, axis=0)
-    if eval_metrics is None:
-        if problem_type == _C.CLASSIFICATION:
-            eval_metrics = ['acc', 'f1', 'mcc', 'auc', 'nll']
-        elif problem_type == _C.REGRESSION:
-            eval_metrics = ['mse']
-        else:
-            raise NotImplementedError
     for metric_name in eval_metrics:
         if metric_name == 'acc':
             metric_scores[metric_name] = accuracy_score(gt_labels, predictions.argmax(axis=-1))
@@ -303,12 +308,14 @@ def train(args):
 
     logging_config(args.save_dir, name='text_classification')
     set_seed(all_cfg.SEED)
-    with open(os.path.join(args.save_dir, 'cfg.yml'), 'w') as f:
-        f.write(all_cfg.dump())
     optimization_cfg = all_cfg.OPTIMIZATION
     model_cfg = all_cfg.MODEL
     backbone_model_cls, backbone_cfg, tokenizer, backbone_params_path, _\
         = get_backbone(model_cfg.BACKBONE.name)
+    with open(os.path.join(args.save_dir, 'cfg.yml'), 'w') as f:
+        f.write(all_cfg.dump())
+    with open(os.path.join(args.save_dir, 'backbone_cfg.yml'), 'w') as f:
+        f.write(backbone_cfg.dump())
     text_backbone = backbone_model_cls.from_cfg(backbone_cfg)
     # Load train and dev dataset
     train_df = pd.read_pickle(args.train_file)
@@ -325,6 +332,7 @@ def train(args):
                                  column_properties=train_dataset.column_properties)
     test_dataset = TabularDataset(test_df, columns=feature_columns,
                                   column_properties=train_dataset.column_properties)
+
     logging.info('Train Dataset:')
     logging.info(train_dataset)
     logging.info('Dev Dataset:')
@@ -352,6 +360,17 @@ def train(args):
                                 shuffle=False, batchify_fn=preprocessor.batchify(is_test=False))
     test_dataloader = DataLoader(processed_test, batch_size=inference_batch_size,
                                  shuffle=False, batchify_fn=preprocessor.batchify(is_test=True))
+    # Get the evaluation metrics
+    if args.eval_metrics is None:
+        if problem_type == _C.CLASSIFICATION:
+            eval_metrics = ['acc', 'f1', 'mcc', 'auc', 'nll']
+        elif problem_type == _C.REGRESSION:
+            eval_metrics = ['mse']
+        else:
+            raise NotImplementedError
+    else:
+        eval_metrics = args.eval_metrics
+
     # Build the network
 
     net = BERTForTabularClassificationV1(text_backbone=text_backbone,
