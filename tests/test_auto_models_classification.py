@@ -20,7 +20,7 @@ GLUE_TASKS_FOR_TEST = \
      ('qqp', ['sentence1', 'sentence2'], 'label', _C.CLASSIFICATION)]
 
 
-@pytest.mark.parametrize('task_name, feature_columns, label_columns', GLUE_TASKS_FOR_TEST)
+@pytest.mark.parametrize('task_name, feature_columns, label_columns,gt_problem_type', GLUE_TASKS_FOR_TEST)
 def test_bert_for_tabular_classification_v1(task_name, feature_columns, label_columns,
                                             gt_problem_type):
     if isinstance(label_columns, str):
@@ -40,7 +40,7 @@ def test_bert_for_tabular_classification_v1(task_name, feature_columns, label_co
                                      columns=feature_columns + label_columns,
                                      column_properties=train_dataset.column_properties)
         test_dataset = TabularDataset(os.path.join(root, task_name, 'test.pd.pkl'),
-                                      columns=feature_columns + label_columns,
+                                      columns=feature_columns,
                                       column_properties=train_dataset.column_properties)
     cfg, tokenizer, param_path, _ = get_pretrained_bert()
     backbone = BertModel.from_cfg(cfg)
@@ -51,7 +51,7 @@ def test_bert_for_tabular_classification_v1(task_name, feature_columns, label_co
                                                          max_length=backbone.max_length,
                                                          label_columns=label_columns[0],
                                                          merge_text=True)
-    problem_type, label_shape = get_problem_type(column_properties['label'])
+    problem_type, label_shape = get_problem_type(column_properties[label_columns[0]])
     assert problem_type == gt_problem_type
     train_preprocessed = preprocessor.process_train(train_dataset.table)
     dev_preprocessed = preprocessor.process_train(dev_dataset.table)
@@ -72,4 +72,5 @@ def test_bert_for_tabular_classification_v1(task_name, feature_columns, label_co
         loss = - mx.npx.pick(logits, label_batch[0])
     else:
         loss = mx.np.square(out - label_batch[0])
-    print(loss)
+    loss = loss.asnumpy()
+    feature_batch = next(iter(dev_dataloader))
