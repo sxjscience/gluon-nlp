@@ -139,6 +139,8 @@ def parse_args():
                         default=None)
     parser.add_argument('--backbone_name', type=str, help='Name of the backbone model',
                         default=None)
+    parser.add_argument('--seed', type=int, help='The seed',
+                        default=None)
     parser.add_argument('--dev_file', type=str,
                         help='The validation pandas dataframe',
                         default=None)
@@ -286,16 +288,16 @@ def train(args):
     all_cfg = Config.get_cfg()
     if args.config_file is not None:
         all_cfg = all_cfg.clone_merge(args.config_file)
-    if args.batch_size is not None or args.num_accumulated is not None\
-            or args.backbone_name is not None:
-        all_cfg.defrost()
-        if args.batch_size is not None:
-            all_cfg.OPTIMIZATION.batch_size = args.batch_size
-        if args.num_accumulated is not None:
-            all_cfg.OPTIMIZATION.num_accumulated = args.num_accumulated
-        if args.backbone_name is not None:
-            all_cfg.MODEL.BACKBONE.name = args.backbone_name
-        all_cfg.freeze()
+    all_cfg.defrost()
+    if args.batch_size is not None:
+        all_cfg.OPTIMIZATION.batch_size = args.batch_size
+    if args.num_accumulated is not None:
+        all_cfg.OPTIMIZATION.num_accumulated = args.num_accumulated
+    if args.backbone_name is not None:
+        all_cfg.MODEL.BACKBONE.name = args.backbone_name
+    if args.seed is not None:
+        all_cfg.SEED = args.seed
+    all_cfg.freeze()
     if args.save_dir is None:
         args.save_dir = '{}_{}'.format(args.task, all_cfg.MODEL.BACKBONE.name)
 
