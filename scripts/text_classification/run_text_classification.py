@@ -382,7 +382,7 @@ def train(args):
     net.text_backbone.load_parameters(backbone_params_path, ctx=ctx_l)
     net.initialize(ctx=ctx_l)
     net.hybridize()
-    num_total_params, num_total_fixed_params = count_parameters(net)
+    num_total_params, num_total_fixed_params = count_parameters(net.collect_params())
     logging.info('#Total Params/Fixed Params={}/{}'.format(num_total_params,
                                                            num_total_fixed_params))
     # Initialize the optimizer
