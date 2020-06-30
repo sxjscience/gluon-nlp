@@ -63,6 +63,8 @@ def test_bert_for_tabular_classification_v1(task_name, feature_columns, label_co
     train_dataloader = DataLoader(train_preprocessed, batch_size=2, shuffle=False,
                                   batchify_fn=preprocessor.batchify(is_test=False))
     dev_dataloader = DataLoader(dev_preprocessed, batch_size=2, shuffle=False,
+                                batchify_fn=preprocessor.batchify(is_test=False))
+    test_dataloader = DataLoader(dev_preprocessed, batch_size=2, shuffle=False,
                                 batchify_fn=preprocessor.batchify(is_test=True))
     feature_batch, label_batch = next(iter(train_dataloader))
     out = model(feature_batch)
@@ -72,4 +74,7 @@ def test_bert_for_tabular_classification_v1(task_name, feature_columns, label_co
     else:
         loss = mx.np.square(out - label_batch[0])
     loss = loss.asnumpy()
-    feature_batch = next(iter(dev_dataloader))
+    feature_batch, label_batch = next(iter(dev_dataloader))
+    mx.npx.waitall()
+    feature_batch = next(iter(test_dataloader))
+    mx.npx.waitall()
