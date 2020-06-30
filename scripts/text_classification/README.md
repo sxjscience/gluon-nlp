@@ -13,10 +13,10 @@ nlp_data prepare_glue --benchmark superglue
 - Run training script
 
 ```bash
-TASK=sst
+TASK=mnli
 TRAIN_FILE=glue/${TASK}/train.pd.pkl
-DEV_FILE=glue/${TASK}/dev.pd.pkl
-TEST_FILE=glue/${TASK}/test.pd.pkl
+DEV_FILE=glue/${TASK}/dev_matched.pd.pkl
+TEST_FILE=glue/${TASK}/test_matched.pd.pkl
 python run_text_classification.py \
      --do_train \
      --train_file ${TRAIN_FILE} \

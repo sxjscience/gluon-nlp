@@ -79,7 +79,7 @@ class TaskConfig:
     @staticmethod
     def get_cfg():
         cfg = CfgNode()
-        cfg.train_file = ''
+        cfg.train_file = 'mnli/'
         cfg.dev_file = ''
         cfg.test_file = ''
         cfg.metadata = ''
@@ -348,9 +348,15 @@ def train(args):
                                                          column_properties=column_properties,
                                                          label_columns=label_columns,
                                                          max_length=model_cfg.BACKBONE.max_length)
+    logging.info('Process training set...')
     processed_train = preprocessor.process_train(train_dataset.table)
+    logging.info('Done!')
+    logging.info('Process dev set...')
     processed_dev = preprocessor.process_train(dev_dataset.table)
+    logging.info('Done!')
+    logging.info('Process test set...')
     processed_test = preprocessor.process_test(test_dataset.table)
+    logging.info('Done!')
     problem_type, label_shape = infer_problem_type(label_column_property)
 
     batch_size = optimization_cfg.batch_size // len(ctx_l) // optimization_cfg.num_accumulated
@@ -459,7 +465,7 @@ def train(args):
             avg_log_loss = log_loss / log_num_samples * batch_size
             logging.info('[Iter {}/{}, Epoch {}] train loss={}, gnorm={}, lr={}, #samples processed={},'
                          ' #sample per second={}'
-                         .format(update_idx, max_update, int(update_idx / updates_per_epoch),
+                         .format(update_idx + 1, max_update, int(update_idx / updates_per_epoch),
                                  avg_log_loss, total_norm, trainer.learning_rate,
                                  log_num_samples,
                                  log_num_samples / (time.time() - logging_start_tick)))
@@ -474,11 +480,11 @@ def train(args):
                                                              eval_metrics=eval_metrics)
             valid_time_spent = time.time() - valid_start_tick
             np.savez_compressed(os.path.join(args.save_dir,
-                                             'iter{}_prediction.npz'.format(update_idx)),
+                                             'iter{}_prediction.npz'.format(update_idx + 1)),
                                 predictions=predictions, labels=gt_labels)
             if problem_type == _C.CLASSIFICATION:
-                if metric_scores['nll'] < best_loss:
-                    best_loss = metric_scores['nll']
+                if metric_scores['acc'] < best_loss:
+                    best_loss = metric_scores['acc']
                     is_best = True
                 else:
                     is_best = False
@@ -491,7 +497,6 @@ def train(args):
             else:
                 raise NotImplementedError
             if is_best:
-                logging.info('Find better validation score!')
                 net.save_parameters(os.path.join(args.save_dir, 'best_model.params'))
             loss_string = ''
             for i, key in enumerate(sorted(metric_scores.keys())):
@@ -500,7 +505,7 @@ def train(args):
                 else:
                     loss_string += '{}={}'.format(key, metric_scores[key])
             logging.info('[Iter {}/{}, Epoch {}] valid {}, time spent={}'.format(
-                update_idx, max_update, int(update_idx / updates_per_epoch),
+                update_idx + 1, max_update, int(update_idx / updates_per_epoch),
                 loss_string, valid_time_spent))
 
 
