@@ -11,7 +11,7 @@ from gluonnlp.lr_scheduler import InverseSquareRootScheduler
 from mxnet.gluon.data import DataLoader
 from gluonnlp.auto import constants as _C
 from gluonnlp.auto.dataset import TabularDataset
-from gluonnlp.auto.preprocessing import TabularClassificationBERTPreprocessor, infer_problem_type
+from gluonnlp.auto.preprocessing import TabularClassificationBERTPreprocessor
 from gluonnlp.auto.models.classification import BERTForTabularClassificationV1
 from gluonnlp.models import get_backbone
 from gluonnlp.utils.config import CfgNode
@@ -334,6 +334,7 @@ def train(args):
                                  column_properties=train_dataset.column_properties)
     test_dataset = TabularDataset(test_df, columns=feature_columns,
                                   column_properties=train_dataset.column_properties)
+    problem_type, label_shape = train_dataset.infer_problem_type(label_columns[0])
 
     logging.info('Train Dataset:')
     logging.info(train_dataset)
@@ -357,7 +358,6 @@ def train(args):
     logging.info('Process test set...')
     processed_test = preprocessor.process_test(test_dataset.table)
     logging.info('Done!')
-    problem_type, label_shape = infer_problem_type(label_column_property)
 
     batch_size = optimization_cfg.batch_size // len(ctx_l) // optimization_cfg.num_accumulated
     inference_batch_size = batch_size * optimization_cfg.val_batch_size_mult
@@ -418,6 +418,7 @@ def train(args):
     log_num_samples_l = [0 for _ in ctx_l]
     logging_start_tick = time.time()
     best_loss = np.inf
+    all_metrics = pd.DataFrame()
     for update_idx in range(max_update):
         num_samples_per_update_l = [0 for _ in ctx_l]
         for accum_idx in range(optimization_cfg.num_accumulated):

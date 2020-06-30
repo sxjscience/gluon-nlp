@@ -205,9 +205,9 @@ class TabularDataset:
 
     def infer_problem_type(self, col_name):
         if self.column_properties[col_name].type == _C.CATEGORICAL:
-            return _C.CLASSIFICATION
+            return _C.CLASSIFICATION, self.column_properties[col_name].num_class
         elif self.column_properties[col_name].type == _C.NUMERICAL:
-            return _C.REGRESSION
+            return _C.REGRESSION, self.column_properties[col_name].shape
         else:
             raise NotImplementedError('Cannot infer the problem type')
 

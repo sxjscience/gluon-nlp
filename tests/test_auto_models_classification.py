@@ -8,7 +8,6 @@ from gluonnlp.auto.dataset import TabularDataset
 from gluonnlp.auto.preprocessing import TabularClassificationBERTPreprocessor
 from gluonnlp.cli.data.general_nlp_benchmark import prepare_glue
 from gluonnlp.auto import constants as _C
-from gluonnlp.auto.preprocessing import infer_problem_type
 from gluonnlp.auto.models.classification import BERTForTabularClassificationV1
 mx.npx.set_np()
 
@@ -51,7 +50,7 @@ def test_bert_for_tabular_classification_v1(task_name, feature_columns, label_co
                                                          max_length=backbone.max_length,
                                                          label_columns=label_columns[0],
                                                          merge_text=True)
-    problem_type, label_shape = infer_problem_type(column_properties[label_columns[0]])
+    problem_type, label_shape = train_dataset.infer_problem_type(label_columns[0])
     assert problem_type == gt_problem_type
     train_preprocessed = preprocessor.process_train(train_dataset.table)
     dev_preprocessed = preprocessor.process_train(dev_dataset.table)
