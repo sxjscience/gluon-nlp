@@ -64,7 +64,7 @@ def test_bert_for_tabular_classification_v1(task_name, feature_columns, label_co
                                   batchify_fn=preprocessor.batchify(is_test=False))
     dev_dataloader = DataLoader(dev_preprocessed, batch_size=2, shuffle=False,
                                 batchify_fn=preprocessor.batchify(is_test=False))
-    test_dataloader = DataLoader(dev_preprocessed, batch_size=2, shuffle=False,
+    test_dataloader = DataLoader(test_preprocessed, batch_size=2, shuffle=False,
                                 batchify_fn=preprocessor.batchify(is_test=True))
     feature_batch, label_batch = next(iter(train_dataloader))
     out = model(feature_batch)

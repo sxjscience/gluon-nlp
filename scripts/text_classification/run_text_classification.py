@@ -343,7 +343,6 @@ def train(args):
     logging.info('Test Dataset:')
     logging.info(test_dataset)
     column_properties = train_dataset.column_properties
-    label_column_property = column_properties[label_columns[0]]
     # Build Preprocessor + Preprocess the training dataset + Inference problem type
     preprocessor = TabularClassificationBERTPreprocessor(tokenizer=tokenizer,
                                                          column_properties=column_properties,
