@@ -2,6 +2,42 @@ from . import constants as _C
 from mxnet.gluon.data import batchify as bf
 
 
+class _TextTokenIdsFieldBatchify:
+    def __init__(self, round_to=None):
+        self._pad_batchify = bf.Pad(round_to=round_to)
+        self._stack_batchify = bf.Stack()
+
+    def __call__(self, data):
+        """
+
+        Parameters
+        ----------
+        data
+
+        Returns
+        -------
+        batch_token_ids
+            (batch_size, sequence_length)
+        batch_valid_length
+            (batch_size,)
+        batch_segment_ids
+            (batch_size, sequence_length)
+        batch_token_offsets
+            (batch_size, seq_length, 2)
+        """
+        batch_token_ids = self._pad_batchify([ele.token_ids for ele in data])
+        batch_valid_length = self._stack_batchify([len(ele.token_ids) for ele in data])
+        if data[0].segment_ids is None:
+            batch_segment_ids = None
+        else:
+            batch_segment_ids = self._pad_batchify([ele.segment_ids for ele in data])
+        if data[0].token_offsets is None:
+            batch_token_offsets = None
+        else:
+            batch_token_offsets = self._pad_batchify([ele.token_offsets for ele in data])
+        return batch_token_ids, batch_valid_length, batch_segment_ids, batch_token_offsets
+
+
 class TextTokenIdsField:
     type = _C.TEXT
 
@@ -21,53 +57,9 @@ class TextTokenIdsField:
         self.segment_ids = segment_ids
         self.token_offsets = token_offsets
 
-    @classmethod
-    def batchify(cls, round_to=None):
-        """Get the batchify function. The batchify function takes a list of samples.
-
-        Parameters
-        ----------
-        round_to
-            The round_to option. Usually, the
-
-        Returns
-        -------
-        batchify_fn
-            The returned batchify function
-        """
-        pad_batchify = bf.Pad(round_to=round_to)
-        stack_batchify = bf.Stack()
-
-        def batchify_fn(data):
-            """
-
-            Parameters
-            ----------
-            data
-
-            Returns
-            -------
-            batch_token_ids
-                (batch_size, sequence_length)
-            batch_valid_length
-                (batch_size,)
-            batch_segment_ids
-                (batch_size, sequence_length)
-            batch_token_offsets
-                (batch_size, seq_length, 2)
-            """
-            batch_token_ids = pad_batchify([ele.token_ids for ele in data])
-            batch_valid_length = stack_batchify([len(ele.token_ids) for ele in data])
-            if data[0].segment_ids is None:
-                batch_segment_ids = None
-            else:
-                batch_segment_ids = pad_batchify([ele.segment_ids for ele in data])
-            if data[0].token_offsets is None:
-                batch_token_offsets = None
-            else:
-                batch_token_offsets = pad_batchify([ele.token_offsets for ele in data])
-            return batch_token_ids, batch_valid_length, batch_segment_ids, batch_token_offsets
-        return batchify_fn
+    @staticmethod
+    def batchify(round_to=None):
+        return _TextTokenIdsFieldBatchify(round_to)
 
     def __str__(self):
         ret = '{}(\n'.format(self.__class__.__name__)
@@ -76,6 +68,38 @@ class TextTokenIdsField:
         ret += 'token_offsets={}\n'.format(self.token_offsets)
         ret += ')\n'
         return ret
+
+
+class _EntityFieldBatchify:
+    def __init__(self):
+        self._pad_batchify = bf.Pad()
+        self._stack_batchify = bf.Stack()
+
+    def __call__(self, data):
+        """The internal batchify function
+
+        Parameters
+        ----------
+        data
+            The input data.
+
+        Returns
+        -------
+        batch_span
+            Shape (batch_size, #num_entities, 2)
+        batch_label
+            Shape (batch_size, #num_entities) + label_shape
+        batch_num_entity
+            Shape (batch_size,)
+        """
+        batch_span = self._pad_batchify([ele.data for ele in data])
+        no_label = data[0].label is None
+        if no_label:
+            batch_label = None
+        else:
+            batch_label = self._pad_batchify([ele.label for ele in data])
+        batch_num_entity = self._stack_batchify([len(ele.data) for ele in data])
+        return batch_span, batch_label, batch_num_entity
 
 
 class EntityField:
@@ -94,37 +118,9 @@ class EntityField:
         self.data = data
         self.label = label
 
-    @classmethod
-    def batchify(cls):
-        pad_batchify = bf.Pad()
-        stack_batchify = bf.Stack()
-
-        def batchify_fn(data):
-            """The internal batchify function
-
-            Parameters
-            ----------
-            data
-                The input data.
-
-            Returns
-            -------
-            batch_span
-                Shape (batch_size, #num_entities, 2)
-            batch_label
-                Shape (batch_size, #num_entities) + label_shape
-            batch_num_entity
-                Shape (batch_size,)
-            """
-            batch_span = pad_batchify([ele.data for ele in data])
-            no_label = data[0].label is None
-            if no_label:
-                batch_label = None
-            else:
-                batch_label = pad_batchify([ele.label for ele in data])
-            batch_num_entity = stack_batchify([len(ele.data) for ele in data])
-            return batch_span, batch_label, batch_num_entity
-        return batchify_fn
+    @staticmethod
+    def batchify():
+        return _EntityFieldBatchify()
 
     def __str__(self):
         ret = '{}(\n'.format(self.__class__.__name__)
@@ -134,30 +130,34 @@ class EntityField:
         return ret
 
 
+class _ArrayBatchify:
+    def __init__(self):
+        self._stack_batchify = bf.Stack()
+
+    def __call__(self, data):
+        """
+
+        Parameters
+        ----------
+        data
+
+        Returns
+        -------
+        dat
+            Shape (batch_size,) + sample_shape
+        """
+        return self._stack_batchify([ele.data for ele in data])
+
+
 class NumericalField:
     type = _C.NUMERICAL
 
     def __init__(self, data):
         self.data = data
 
-    @classmethod
-    def batchify(cls):
-        stack_batchify = bf.Stack()
-
-        def batchify_fn(samples):
-            """
-
-            Parameters
-            ----------
-            samples
-
-            Returns
-            -------
-            dat
-                Shape (batch_size,) + sample_shape
-            """
-            return stack_batchify([ele.data for ele in samples])
-        return batchify_fn
+    @staticmethod
+    def batchify():
+        return _ArrayBatchify()
 
     def __str__(self):
         ret = '{}(\n'.format(self.__class__.__name__)
