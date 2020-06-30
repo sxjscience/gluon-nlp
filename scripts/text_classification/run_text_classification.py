@@ -15,7 +15,8 @@ from gluonnlp.auto.preprocessing import TabularClassificationBERTPreprocessor, i
 from gluonnlp.auto.models.classification import BERTForTabularClassificationV1
 from gluonnlp.models import get_backbone
 from gluonnlp.utils.config import CfgNode
-from gluonnlp.utils.misc import parse_ctx, set_seed, grouper, repeat, logging_config
+from gluonnlp.utils.misc import parse_ctx, set_seed, grouper, repeat,\
+    logging_config, count_parameters
 from gluonnlp.utils.parameter import move_to_ctx, clip_grad_global_norm
 import pandas as pd
 import argparse
@@ -83,6 +84,7 @@ class TaskConfig:
         cfg.test_file = ''
         cfg.metadata = ''
         cfg.eval_metric = ''
+        cfg.columns = ''
 
 
 class Config:
@@ -209,11 +211,11 @@ def apply_layerwise_decay(model, layerwise_decay, not_included=None):
         max_depth += 1
     for key, value in model.collect_params().items():
         if 'scores' in key:
-            value.lr_mult = layerwise_decay**(0)
+            value.lr_mult = layerwise_decay ** 0
         if 'pool' in key:
-            value.lr_mult = layerwise_decay**(1)
+            value.lr_mult = layerwise_decay ** 1
         if 'embed' in key:
-            value.lr_mult = layerwise_decay**(max_depth + 1)
+            value.lr_mult = layerwise_decay ** (max_depth + 1)
 
     for (layer_depth, layer) in enumerate(all_layers):
         layer_params = layer.collect_params()
@@ -380,7 +382,9 @@ def train(args):
     net.text_backbone.load_parameters(backbone_params_path, ctx=ctx_l)
     net.initialize(ctx=ctx_l)
     net.hybridize()
-
+    num_total_params, num_total_fixed_params = count_parameters(net)
+    logging.info('#Total Params/Fixed Params={}/{}'.format(num_total_params,
+                                                           num_total_fixed_params))
     # Initialize the optimizer
     updates_per_epoch = int(len(train_dataloader) / (optimization_cfg.num_accumulated * len(ctx_l)))
     optimizer, optimizer_params, max_update = get_optimizer(optimization_cfg,
@@ -462,7 +466,7 @@ def train(args):
             logging_start_tick = time.time()
             log_loss_l = [mx.np.array(0.0, dtype=np.float32, ctx=ctx) for ctx in ctx_l]
             log_num_samples_l = [0 for _ in ctx_l]
-        if (update_idx + 1) % valid_interval == 0:
+        if (update_idx + 1) % valid_interval == 0 or (update_idx + 1) == max_update:
             valid_start_tick = time.time()
             predictions, gt_labels, metric_scores = validate(net, dataloader=dev_dataloader,
                                                              ctx_l=ctx_l,
