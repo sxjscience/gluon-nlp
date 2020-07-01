@@ -75,6 +75,7 @@ def test_get_activation():
     for act_type in ['leaky', 'identity', 'elu', 'gelu', 'gelu(tanh)', 'gelu(sigmoid)',
                      'relu', 'sigmoid', 'tanh', 'softrelu', 'softsign', 'prelu']:
         act = get_activation(act_type)
+        act.initialize()
         act.hybridize()
         _ = act(mx.np.random.normal(0, 1, (10, 10)))
     act = get_activation('leaky(0.2)')
