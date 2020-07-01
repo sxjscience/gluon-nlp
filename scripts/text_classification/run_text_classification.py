@@ -212,10 +212,13 @@ def apply_layerwise_decay(model, layerwise_decay, not_included=None):
     for key, value in model.collect_params().items():
         if 'scores' in key:
             value.lr_mult = layerwise_decay ** 0
+            print('key=', key, 'lr_mult=', value.lr_mult, 'factor=', 0)
         if 'pool' in key:
             value.lr_mult = layerwise_decay ** 1
+            print('key=', key, 'lr_mult=', value.lr_mult, 'factor=', 1)
         if 'embed' in key:
             value.lr_mult = layerwise_decay ** (max_depth + 1)
+            print('key=', key, 'lr_mult=', value.lr_mult, 'factor=', max_depth + 1)
 
     for (layer_depth, layer) in enumerate(all_layers):
         layer_params = layer.collect_params()
@@ -224,6 +227,7 @@ def apply_layerwise_decay(model, layerwise_decay, not_included=None):
                 if pn in key:
                     continue
             value.lr_mult = layerwise_decay**(max_depth - layer_depth)
+            print('key=', key, 'lr_mult=', value.lr_mult, 'factor=', max_depth - layer_depth)
 
 
 def validate(net, dataloader, ctx_l, problem_type, eval_metrics=None, pos_label=1):
