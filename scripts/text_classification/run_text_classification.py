@@ -206,9 +206,7 @@ def apply_layerwise_decay(model, layerwise_decay, not_included=None):
     # consider the task specific fine-tuning layer as the last layer, following with pooler
     # In addition, the embedding parameters have the smaller learning rate based on this setting.
     all_layers = model.encoder.all_encoder_layers
-    max_depth = len(all_layers)
-    if 'pool' in model.collect_params().keys():
-        max_depth += 1
+    max_depth = len(all_layers) + 2
     for key, value in model.collect_params().items():
         if 'scores' in key:
             value.lr_mult = layerwise_decay ** 0
@@ -217,8 +215,8 @@ def apply_layerwise_decay(model, layerwise_decay, not_included=None):
             value.lr_mult = layerwise_decay ** 1
             print('key=', key, 'lr_mult=', value.lr_mult, 'factor=', 1)
         if 'embed' in key:
-            value.lr_mult = layerwise_decay ** (max_depth + 1)
-            print('key=', key, 'lr_mult=', value.lr_mult, 'factor=', max_depth + 1)
+            value.lr_mult = layerwise_decay ** max_depth
+            print('key=', key, 'lr_mult=', value.lr_mult, 'factor=', max_depth)
 
     for (layer_depth, layer) in enumerate(all_layers):
         layer_params = layer.collect_params()
@@ -226,8 +224,8 @@ def apply_layerwise_decay(model, layerwise_decay, not_included=None):
             for pn in not_included:
                 if pn in key:
                     continue
-            value.lr_mult = layerwise_decay**(max_depth - layer_depth)
-            print('key=', key, 'lr_mult=', value.lr_mult, 'factor=', max_depth - layer_depth)
+            value.lr_mult = layerwise_decay**(max_depth - (layer_depth + 1))
+            print('key=', key, 'lr_mult=', value.lr_mult, 'factor=', max_depth - (layer_depth + 1))
 
 
 def validate(net, dataloader, ctx_l, problem_type, eval_metrics=None, pos_label=1):
