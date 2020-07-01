@@ -4,6 +4,7 @@ from collections import OrderedDict
 from typing import Dict, Optional, List, Tuple, Union
 import numpy as np
 import mxnet.gluon.data.batchify as bf
+from .dataset import TabularDataset
 from .fields import TextTokenIdsField, EntityField, CategoricalField, NumericalField
 from ..utils.preprocessing import get_trimmed_lengths, match_tokens_with_char_spans
 from ..utils.misc import num_mp_workers
@@ -433,11 +434,15 @@ class TabularClassificationBERTPreprocessor:
             return bf.Group(bf.Group(feature_batchify_fn_l),
                             bf.Group(label_batchify_fn_l))
 
-    def process_train(self, df):
-        return parallel_transform(df, functools.partial(self.__call__, is_test=False))
+    def process_train(self, df_or_dataset):
+        if isinstance(df_or_dataset, TabularDataset):
+            df_or_dataset = df_or_dataset.table
+        return parallel_transform(df_or_dataset, functools.partial(self.__call__, is_test=False))
 
-    def process_test(self, df):
-        return parallel_transform(df, functools.partial(self.__call__, is_test=True))
+    def process_test(self, df_or_dataset):
+        if isinstance(df_or_dataset, TabularDataset):
+            df_or_dataset = df_or_dataset.table
+        return parallel_transform(df_or_dataset, functools.partial(self.__call__, is_test=True))
 
     def __call__(self, data, is_test=False):
         """Transform the data into a list of fields.
