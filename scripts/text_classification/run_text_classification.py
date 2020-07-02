@@ -210,13 +210,10 @@ def apply_layerwise_decay(model, layerwise_decay, not_included=None):
     for key, value in model.collect_params().items():
         if 'scores' in key:
             value.lr_mult = layerwise_decay ** 0
-            print('key=', key, 'lr_mult=', value.lr_mult, 'factor=', 0)
         if 'pool' in key:
             value.lr_mult = layerwise_decay ** 1
-            print('key=', key, 'lr_mult=', value.lr_mult, 'factor=', 1)
         if 'embed' in key:
             value.lr_mult = layerwise_decay ** max_depth
-            print('key=', key, 'lr_mult=', value.lr_mult, 'factor=', max_depth)
 
     for (layer_depth, layer) in enumerate(all_layers):
         layer_params = layer.collect_params()
@@ -421,7 +418,6 @@ def train(args):
     best_loss = np.inf
     all_metrics = pd.DataFrame()
     mx.npx.waitall()
-    cu_prof_start()
     for update_idx in range(max_update):
         num_samples_per_update_l = [0 for _ in ctx_l]
         for accum_idx in range(optimization_cfg.num_accumulated):
