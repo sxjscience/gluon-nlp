@@ -292,21 +292,6 @@ def validate(net, dataloader, ctx_l, problem_type, eval_metrics=None, pos_label=
     return predictions, gt_labels, metric_scores
 
 
-import ctypes
-_cudart = ctypes.CDLL('libcudart.so')
-
-def cu_prof_start():
-  ret = _cudart.cudaProfilerStart()
-  if ret != 0:
-    raise Exception('cudaProfilerStart() returned %d' % ret)
-
-
-def cu_prof_stop():
-  ret = _cudart.cudaProfilerStop()
-  if ret != 0:
-    raise Exception('cudaProfilerStop() returned %d' % ret)
-
-
 def train(args):
     ctx_l = parse_ctx(args.gpus)
     all_cfg = Config.get_cfg()
@@ -438,9 +423,6 @@ def train(args):
     mx.npx.waitall()
     cu_prof_start()
     for update_idx in range(max_update):
-        if update_idx > 2:
-            cu_prof_stop()
-            break
         num_samples_per_update_l = [0 for _ in ctx_l]
         for accum_idx in range(optimization_cfg.num_accumulated):
             sample_l = next(train_loop_dataloader)
