@@ -222,7 +222,6 @@ def apply_layerwise_decay(model, layerwise_decay, not_included=None):
                 if pn in key:
                     continue
             value.lr_mult = layerwise_decay**(max_depth - (layer_depth + 1))
-            print('key=', key, 'lr_mult=', value.lr_mult, 'factor=', max_depth - (layer_depth + 1))
 
 
 def validate(net, dataloader, ctx_l, problem_type, eval_metrics=None, pos_label=1):
