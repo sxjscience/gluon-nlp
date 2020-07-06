@@ -343,8 +343,8 @@ def read_rte_superglue(dir_path):
 def read_wic(dir_path):
     df_dict = dict()
     meta_data = dict()
-    meta_data['entities1'] = {'type': 'entity', 'parent': 'sentence1'}
-    meta_data['entities2'] = {'type': 'entity', 'parent': 'sentence2'}
+    meta_data['entities1'] = {'type': 'entity', 'attrs': {'parent': 'sentence1'}}
+    meta_data['entities2'] = {'type': 'entity', 'attrs': {'parent': 'sentence2'}}
 
     for fold in ['train', 'val', 'test']:
         if fold != 'test':
@@ -380,8 +380,8 @@ def read_wsc(dir_path):
     df_dict = dict()
     tokenizer = WhitespaceTokenizer()
     meta_data = dict()
-    meta_data['noun'] = {'type': 'entity', 'parent': 'text'}
-    meta_data['pronoun'] = {'type': 'entity', 'parent': 'text'}
+    meta_data['noun'] = {'type': 'entity', 'attrs': {'parent': 'text'}}
+    meta_data['pronoun'] = {'type': 'entity', 'attrs': {'parent': 'text'}}
     for fold in ['train', 'val', 'test']:
         jsonl_path = os.path.join(dir_path, '{}.jsonl'.format(fold))
         df = read_jsonl_superglue(jsonl_path)
@@ -429,8 +429,8 @@ def read_boolq(dir_path):
 def read_record(dir_path):
     df_dict = dict()
     meta_data = dict()
-    meta_data['entities'] = {'type': 'entity', 'parent': 'text'}
-    meta_data['answers'] = {'type': 'entity', 'parent': 'text'}
+    meta_data['entities'] = {'type': 'entity', 'attrs': {'parent': 'text'}}
+    meta_data['answers'] = {'type': 'entity', 'attrs': {'parent': 'text'}}
     for fold in ['train', 'val', 'test']:
         if fold != 'test':
             columns = ['source', 'text', 'entities', 'query', 'answers']

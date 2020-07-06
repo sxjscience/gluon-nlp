@@ -13,7 +13,8 @@ test_snli_df, test_snli_metadata = autonlp_snli_testdata()
 
 
 def test_text_column_property():
-    text_column_property = TextColumnProperty(test_snli_df['sentence1'])
+    text_column_property = TextColumnProperty()
+    text_column_property.parse(test_snli_df['sentence1'])
     print(text_column_property)  # Test printing
     assert text_column_property.type == _C.TEXT
     assert text_column_property.num_sample == 1000
@@ -22,7 +23,8 @@ def test_text_column_property():
     assert text_column_property.max_length == 229
     assert text_column_property.name == 'sentence1'
     assert text_column_property.lang == 'en'
-    text_column_property2 = text_column_property.parse_other(test_snli_df['sentence2'])
+    text_column_property2 = text_column_property.clone()
+    text_column_property2.parse(test_snli_df['sentence2'])
     assert text_column_property2.min_length == 11
     assert text_column_property2.max_length == 116
     assert text_column_property2.name == 'sentence2'
@@ -31,7 +33,8 @@ def test_text_column_property():
 
 def test_categorical_column_property():
     test_snli_df2 = test_snli_df.iloc[10:20]
-    column_property = CategoricalColumnProperty(test_snli_df['label'])
+    column_property = CategoricalColumnProperty()
+    column_property.parse(test_snli_df['label'])
     print(column_property)
     assert column_property.type == _C.CATEGORICAL
     assert column_property.categories == ['contradiction', 'entailment', 'neutral']
@@ -43,19 +46,21 @@ def test_categorical_column_property():
     for idx, catalog in enumerate(column_property.categories):
         assert column_property.transform(catalog) == idx
         assert column_property.inv_transform(column_property.transform(catalog)) == catalog
-    categorical_column_property2 = column_property.parse_other(test_snli_df2['label'])
+    categorical_column_property2 = column_property.clone()
+    categorical_column_property2.parse(test_snli_df2['label'])
     assert categorical_column_property2.categories == ['contradiction', 'entailment', 'neutral']
     assert categorical_column_property2.frequencies == [4, 3, 3]
 
 
 def test_numerical_column_property():
     test_series = pd.Series(np.arange(0, 100, dtype=np.float32))
-    column_property = NumericalColumnProperty(test_series)
+    column_property = NumericalColumnProperty()
+    column_property.parse(test_series)
     print(column_property)
     assert column_property.type == _C.NUMERICAL
     assert column_property.num_sample == 100
-    another_column_property = column_property.parse_other(pd.Series(np.arange(0, 10,
-                                                                              dtype=np.float32)))
+    another_column_property = column_property.clone()
+    another_column_property.parse(pd.Series(np.arange(0, 10, dtype=np.float32)))
     assert another_column_property.num_sample == 10
 
 
@@ -63,8 +68,8 @@ def test_entity_column_property():
     # Test for Numeric Label
     sentence1_entity_numeric = test_snli_df['sentence1_entity_numeric']
     entity_with_numeric_label = EntityColumnProperty(
-        sentence1_entity_numeric,
-        parent=test_snli_metadata['sentence1_entity_numeric']['parent'])
+        **test_snli_metadata['sentence1_entity_numeric']['attrs'])
+    entity_with_numeric_label.parse(sentence1_entity_numeric)
     print(entity_with_numeric_label)
     assert entity_with_numeric_label.label_shape == (10,)
     assert entity_with_numeric_label.parent == 'sentence1'
@@ -80,7 +85,8 @@ def test_entity_column_property():
     assert merged_labels.shape == (10, 10)
     assert merged_char_offsets[0, 0] == sentence1_entity_numeric[0][0][0]
     assert merged_char_offsets[0, 1] == sentence1_entity_numeric[0][0][1]
-    col_prop2 = entity_with_numeric_label.parse_other(sentence1_entity_numeric.iloc[1:2])
+    col_prop2 = entity_with_numeric_label.clone()
+    col_prop2.parse(sentence1_entity_numeric.iloc[1:2])
     assert col_prop2.label_shape == (10,)
     assert col_prop2.label_type == _C.NUMERICAL
     assert col_prop2.label_keys is None
@@ -89,8 +95,8 @@ def test_entity_column_property():
     # Test for Categorical Label
     sentence1_entity_categorical = test_snli_df['sentence1_entity_categorical']
     column_prop = EntityColumnProperty(
-        sentence1_entity_categorical,
-        parent=test_snli_metadata['sentence1_entity_categorical']['parent'])
+        **test_snli_metadata['sentence1_entity_categorical']['attrs'])
+    column_prop.parse(sentence1_entity_categorical)
     print(column_prop)
     assert column_prop.parent == 'sentence1'
     assert column_prop.label_keys == ['ADJ', 'ADP', 'ADV', 'AUX', 'CCONJ', 'DET', 'NOUN',
@@ -110,7 +116,8 @@ def test_entity_column_property():
     # Test for None
     sentence1_entity_categorical_with_none = sentence1_entity_categorical.copy().iloc[1:5]
     sentence1_entity_categorical_with_none[0] = None
-    column_prop2 = column_prop.parse_other(sentence1_entity_categorical_with_none)
+    column_prop2 = column_prop.clone()
+    column_prop2.parse(sentence1_entity_categorical_with_none)
     assert column_prop2.num_missing_sample == 1
     assert column_prop2.label_keys == column_prop.label_keys
     merged_char_offsets, merged_labels = column_prop2.transform(
@@ -121,8 +128,8 @@ def test_entity_column_property():
     # Test for Entity columns without label
     sentence2_entity = test_snli_df['sentence2_entity']
     column_prop = EntityColumnProperty(
-        sentence2_entity,
-        parent=test_snli_metadata['sentence2_entity']['parent'])
+        **test_snli_metadata['sentence2_entity']['attrs'])
+    column_prop.parse(sentence2_entity)
     print(column_prop)
     assert column_prop.num_sample == 1000
     assert column_prop.num_total_entity == 8344

@@ -9,6 +9,63 @@ from ..base import INT_TYPES, FLOAT_TYPES
 from typing import List, Optional, Union, Dict
 
 
+def load_pandas_df(data: Union[str, pd.DataFrame]):
+    if isinstance(data, pd.DataFrame):
+        return data
+    loading_error = dict()
+    df = None
+    for loader, fmt in [(pd.read_pickle, 'pickle'),
+                        (pd.read_parquet, 'parquet'),
+                        (pd.read_csv, 'csv')]:
+        try:
+            df = loader(data)
+            break
+        except Exception as err:
+            loading_error[fmt] = err
+    if df is not None:
+        return df
+    else:
+        raise Exception(loading_error)
+
+
+def get_column_properties_from_metadata(metadata):
+    """Generate the column properties from metadata
+
+    Parameters
+    ----------
+    metadata
+        The path to the metadata json file. Or the loaded meta data
+
+    Returns
+    -------
+    column_properties
+        The column properties
+    """
+    column_properties = collections.OrderedDict()
+    if metadata is None:
+        return column_properties
+    if isinstance(metadata, str):
+        with open(metadata, 'r', encoding='utf-8') as f:
+            metadata = json.load(f)
+    else:
+        assert isinstance(metadata, dict)
+    for col_name in metadata:
+        col_type = metadata[col_name]['type']
+        col_attrs = metadata[col_name]['attrs']
+        if col_type == _C.TEXT:
+            column_properties[col_name] = TextColumnProperty(**col_attrs)
+        elif col_type == _C.ENTITY:
+            column_properties[col_name] = EntityColumnProperty(**col_attrs)
+        elif col_type == _C.NUMERICAL:
+            column_properties[col_name] = NumericalColumnProperty(**col_attrs)
+        elif col_type == _C.CATEGORICAL:
+            column_properties[col_name] = CategoricalColumnProperty(**col_attrs)
+        else:
+            raise KeyError('Column type is not supported.'
+                           ' Type="{}"'.format(col_type))
+    return column_properties
+
+
 def is_categorical_column(data: pd.Series,
                           threshold: int = 100,
                           ratio: float = 0.1) -> bool:
@@ -58,6 +115,7 @@ def get_column_properties(
         The chosen column names of the table
     metadata
         The additional metadata object to help specify the column types
+        {'col_name': {'type':
     provided_column_properties
         The column properties provided.
         For example, these can be the column properties of the training set and you provide this
@@ -73,45 +131,32 @@ def get_column_properties(
     # Process all feature columns
     if column_names is None:
         column_names = df.columns
+    column_properties_from_metadata = get_column_properties_from_metadata(metadata)
     for col_name in column_names:
         if provided_column_properties is not None and col_name in provided_column_properties:
-            column_properties[col_name] =\
-                provided_column_properties[col_name].parse_other(df[col_name])
+            column_properties[col_name] = provided_column_properties[col_name].clone()
+            column_properties[col_name].parse(df[col_name])
             continue
-        if metadata is not None and col_name in metadata:
-            col_type = metadata[col_name]['type']
-            if col_type == _C.CATEGORICAL:
-                column_properties[col_name] = CategoricalColumnProperty(df[col_name])
-                continue
-            elif col_type == _C.TEXT:
-                column_properties[col_name] = TextColumnProperty(df[col_name])
-                continue
-            elif col_type == _C.NUMERICAL:
-                column_properties[col_name] = NumericalColumnProperty(df[col_name])
-                continue
-            elif col_type == _C.ENTITY:
-                parent = metadata[col_name]['parent']
-                column_properties[col_name] = EntityColumnProperty(column_data=df[col_name],
-                                                                   parent=parent)
-                continue
-            else:
-                raise KeyError('Column type is not supported.'
-                               ' Type="{}"'.format(col_type))
+        if col_name in column_properties_from_metadata:
+            column_properties[col_name] = column_properties_from_metadata[col_name].clone()
+            column_properties[col_name].parse(df[col_name])
+            continue
         idx = df[col_name].first_valid_index()
         if idx is None:
-            # No valid index, it's safe to ignore the column
-            warnings.warn('Column Name="{}" has no valid data and is ignored.'.format(col_name))
-            continue
+            # No valid index, it should have been handled previously
+            raise ValueError('Column Name="{}" has no valid data and is ignored.'.format(col_name))
         ele = df[col_name][idx]
         # Try to inference the categorical column
         if isinstance(ele, collections.abc.Hashable) and not isinstance(ele, FLOAT_TYPES):
             # Try to tell if the column is a categorical column
             is_categorical = is_categorical_column(df[col_name])
             if is_categorical:
-                column_properties[col_name] = CategoricalColumnProperty(df[col_name])
+                column_properties[col_name] = CategoricalColumnProperty()
+                column_properties[col_name].parse(df[col_name])
                 continue
         if isinstance(ele, str):
-            column_properties[col_name] = TextColumnProperty(df[col_name])
+            column_properties[col_name] = TextColumnProperty()
+            column_properties[col_name].parse(df[col_name])
             continue
         # Raise error if we find an entity column
         if isinstance(ele, list):
@@ -121,7 +166,8 @@ def get_column_properties(
         elif isinstance(ele, dict):
             raise ValueError('An Entity column "{}" is found but no metadata is given.'
                              .format(col_name))
-        column_properties[col_name] = NumericalColumnProperty(df[col_name])
+        column_properties[col_name] = NumericalColumnProperty()
+        column_properties[col_name].parse(df[col_name])
     return column_properties
 
 
@@ -157,7 +203,7 @@ class TabularDataset:
     def __init__(self, path_or_df: Union[str, pd.DataFrame],
                  *,
                  columns=None,
-                 metadata: Optional[Union[str, Dict]] = None,
+                 column_metadata: Optional[Union[str, Dict]] = None,
                  column_properties: Optional[collections.OrderedDict] = None):
         """
 
@@ -167,33 +213,31 @@ class TabularDataset:
             The path or dataframe of the tabular dataset for NLP.
         columns
             The chosen columns to load the data
-        metadata
+        column_metadata
             The metadata object that describes the property of the columns in the dataset
         column_properties
             The given column properties
         """
-        if not isinstance(path_or_df, pd.DataFrame):
-            # Assume pickle.
-            df = pd.read_pickle(path_or_df)
-        else:
-            df = path_or_df
+        df = load_pandas_df(path_or_df)
         if columns is not None:
             if isinstance(columns, str):
                 columns = [columns]
             df = df[columns]
-        table = convert_text_to_numeric_df(df)
-        if metadata is None:
-            metadata = dict()
-        elif isinstance(metadata, str):
-            with open(metadata, 'r') as f:
-                metadata = json.load(f)
+        if column_metadata is None:
+            column_metadata = dict()
+        elif isinstance(column_metadata, str):
+            with open(column_metadata, 'r') as f:
+                column_metadata = json.load(f)
         # Inference the column properties
-        column_properties = get_column_properties(table, metadata=metadata,
+        column_properties = get_column_properties(df,
+                                                  metadata=column_metadata,
                                                   provided_column_properties=column_properties)
-        # Ignore some unused columns
-        table = df[list(column_properties.keys())]
-        self._table = table
+        self._table = df
         self._column_properties = column_properties
+
+    @property
+    def columns(self):
+        return list(self._table.columns)
 
     @property
     def table(self):
@@ -203,11 +247,22 @@ class TabularDataset:
     def column_properties(self):
         return self._column_properties
 
-    def infer_problem_type(self, col_name):
-        if self.column_properties[col_name].type == _C.CATEGORICAL:
-            return _C.CLASSIFICATION, self.column_properties[col_name].num_class
-        elif self.column_properties[col_name].type == _C.NUMERICAL:
-            return _C.REGRESSION, self.column_properties[col_name].shape
+    def column_metadata(self):
+        metadata = dict()
+        for col_name, col_prop in self.column_properties.items():
+            metadata[col_name] = {'type': col_prop.type,
+                                  'attrs': col_prop.get_attributes()}
+        return metadata
+
+    def save_column_metadata(self, save_path):
+        with open(save_path, 'w', encoding='utf-8') as of:
+            json.dump(self.column_metadata(), of, ensure_ascii=False)
+
+    def infer_problem_type(self, label_col_name):
+        if self.column_properties[label_col_name].type == _C.CATEGORICAL:
+            return _C.CLASSIFICATION, self.column_properties[label_col_name].num_class
+        elif self.column_properties[label_col_name].type == _C.NUMERICAL:
+            return _C.REGRESSION, self.column_properties[label_col_name].shape
         else:
             raise NotImplementedError('Cannot infer the problem type')
 

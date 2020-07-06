@@ -103,12 +103,14 @@ def autonlp_snli_testdata():
     import pandas as pd
     with tempfile.TemporaryDirectory() as root:
         test_snli_df_path = download(get_repo_url()
-                                + 'autonlp_test_datasets/snli_test_dataset-0de8d633.pd.pkl',
-                                path=os.path.join(root, 'test.pkl'),
-                                sha1_hash='0de8d63354c33d66f34c1e4cc2b4289a9f8c8a3e')
+                                     + 'autonlp_test_datasets/snli_test_dataset-0de8d633.pd.pkl',
+                                     path=os.path.join(root, 'test.pkl'),
+                                     sha1_hash='0de8d63354c33d66f34c1e4cc2b4289a9f8c8a3e')
         test_snli_df = pd.read_pickle(test_snli_df_path)
-        test_snli_metadata = {'sentence1_entity_numeric': {'type': 'entity', 'parent': 'sentence1'},
+        test_snli_metadata = {'sentence1_entity_numeric': {'type': 'entity',
+                                                           'attrs': {'parent': 'sentence1'}},
                               'sentence1_entity_categorical': {'type': 'entity',
-                                                               'parent': 'sentence1'},
-                              'sentence2_entity': {'type': 'entity', 'parent': 'sentence2'}}
+                                                               'attrs': {'parent': 'sentence1'}},
+                              'sentence2_entity': {'type': 'entity',
+                                                   'attrs': {'parent': 'sentence2'}}}
     return test_snli_df, test_snli_metadata

@@ -10,13 +10,27 @@ from gluonnlp.cli.data.general_nlp_benchmark import prepare_glue
 def test_tabular_nlp_snli_dataset():
     snli_sample_df, snli_sample_metadata = autonlp_snli_testdata()
     dataset = TabularDataset(snli_sample_df,
-                             metadata=snli_sample_metadata)
+                             column_metadata=snli_sample_metadata)
     assert dataset.column_properties['sentence1'].type == _C.TEXT
     assert dataset.column_properties['sentence2'].type == _C.TEXT
     assert dataset.column_properties['sentence1_entity_numeric'].type == _C.ENTITY
     assert dataset.column_properties['sentence1_entity_categorical'].type == _C.ENTITY
     assert dataset.column_properties['sentence2_entity'].type == _C.ENTITY
     assert dataset.column_properties['label'].type == _C.CATEGORICAL
+    new_dataset1 = TabularDataset(snli_sample_df.iloc[:10],
+                                  column_metadata=dataset.column_metadata())
+    new_dataset2 = TabularDataset(snli_sample_df.iloc[:10],
+                                  column_properties=dataset.column_properties)
+    assert new_dataset1.columns == dataset.columns
+    assert new_dataset2.columns == dataset.columns
+    assert new_dataset1.column_metadata() == dataset.column_metadata()
+    assert new_dataset2.column_metadata() == dataset.column_metadata()
+    with tempfile.TemporaryDirectory() as root:
+        new_dataset1.save_column_metadata(os.path.join(root, 'metadata.json'))
+        new_dataset3 = TabularDataset(snli_sample_df.iloc[:10],
+                                      column_metadata=os.path.join(root, 'metadata.json'))
+        assert new_dataset3.columns == dataset.columns
+        assert new_dataset3.column_metadata() == dataset.column_metadata()
 
 
 GLUE_TASKS_FOR_TEST = \
@@ -80,6 +94,12 @@ def test_glue_datasets(task_name, feature_columns, label_columns):
         if expected_label_type is not None:
             assert train_data.column_properties[label_columns].type == expected_label_type
             assert dev_data.column_properties[label_columns].type == expected_label_type
+        for col_name in test_data.columns:
+            assert test_data.column_properties[col_name].get_attributes()\
+                   == train_data.column_properties[col_name].get_attributes()
+        for col_name in dev_data.columns:
+            assert dev_data.column_properties[col_name].get_attributes()\
+                   == train_data.column_properties[col_name].get_attributes()
 
 
 @pytest.mark.parametrize('task_name, feature_columns, label_columns', SUPERGLUE_TASKS_FOR_TEST)
@@ -106,12 +126,17 @@ def test_superglue_datasets(task_name, feature_columns, label_columns):
         test_path = os.path.join(root, task_name, 'test.pd.pkl')
         # We test for the parsing
         train_data = TabularDataset(train_path,
-                                    metadata=metadata_path)
+                                    column_metadata=metadata_path)
         dev_data = TabularDataset(dev_path,
                                   column_properties=train_data.column_properties,
-                                  metadata=metadata_path)
+                                  column_metadata=metadata_path)
         test_data = TabularDataset(test_path,
-                                   column_properties=train_data.column_properties,
-                                   metadata=metadata_path)
+                                   column_properties=train_data.column_properties)
         assert train_data.column_properties[label_columns].type == expected_label_type
         assert dev_data.column_properties[label_columns].type == expected_label_type
+        for col_name in test_data.columns:
+            assert test_data.column_properties[col_name].get_attributes()\
+                   == train_data.column_properties[col_name].get_attributes()
+        for col_name in dev_data.columns:
+            assert dev_data.column_properties[col_name].get_attributes()\
+                   == train_data.column_properties[col_name].get_attributes()

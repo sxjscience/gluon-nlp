@@ -1,13 +1,15 @@
 import abc
 import pandas as pd
 import numpy as np
+import json
 import collections
 from typing import List, Optional, Union, Tuple, Hashable
 from . import constants as _C
 from ..data.vocab import Vocab
 from ..data.filtering import LanguageIdentifier
-from ..utils.misc import num_mp_workers
-__all__ = ['CategoricalColumnProperty', 'TextColumnProperty', 'NumericalColumnProperty',
+__all__ = ['CategoricalColumnProperty',
+           'TextColumnProperty',
+           'NumericalColumnProperty',
            'EntityColumnProperty']
 
 
@@ -15,13 +17,19 @@ lang_id = LanguageIdentifier(algo='fasttext_compressed')
 
 
 class ColumnProperty(abc.ABC):
-    type = None
+    """Column property means the general property of the columns.
 
-    def __init__(self, column_data: pd.Series):
-        assert isinstance(column_data, pd.Series), 'Currently, the input column data must be a Pandas Series.'
-        self._num_sample = len(column_data)
-        self._num_missing_samples = column_data.isnull().sum().sum().item()
-        self._name = column_data.name
+    It performs basic featurization
+
+    """
+    type = _C.NULL
+
+    def __init__(self, **kwargs):
+        self._parsed = False
+        self._freeze = False
+        self._num_sample = None
+        self._num_missing_samples = None
+        self._name = None
 
     @property
     def name(self):
@@ -42,14 +50,20 @@ class ColumnProperty(abc.ABC):
     def transform(self, ele):
         return ele
 
-    # TODO(sxjscience) Try to add parse method
-    @classmethod
-    def parse(cls, column_data: pd.Series):
-        pass
+    @abc.abstractmethod
+    def parse(self, column_data: pd.Series):
+        """Parse the column data and fill in the necessary properties"""
+        assert not self._parsed, 'Cannot call parse twice. ' \
+                                 'Use "col_prop.clone()" and parse again.'
+        self._parsed = True
+        assert isinstance(column_data, pd.Series), \
+            'Currently, the input column data must be a Pandas Series.'
+        self._num_sample = len(column_data)
+        self._num_missing_samples = column_data.isnull().sum().sum().item()
+        self._name = column_data.name
 
     @abc.abstractmethod
-    def parse_other(self, column_data: pd.Series):
-        """Parse another column data with the given property"""
+    def clone(self):
         pass
 
     def info(self, additional_attributes=None):
@@ -60,26 +74,15 @@ class ColumnProperty(abc.ABC):
         ret = '{}(\n'.format(basename)
         ret += ' ' * padding + 'name="{}"\n'.format(self.name)
         ret += ' ' * padding + '#total/missing={}/{}\n'.format(self.num_sample,
-                                                             self.num_missing_sample)
+                                                               self.num_missing_sample)
         if additional_attributes is not None:
             for key, info in additional_attributes:
                 ret += ' ' * padding + '{}={}\n'.format(key, str(info))
         ret += ')\n'
         return ret
 
-    #TODO(sxjscience) Add serialzation
-    def to_json(self):
-        pass
-
-    @classmethod
-    def from_json(cls, json_str: Union[str, bytes, bytearray]):
-        pass
-
-    def save(self):
-        pass
-
-    @classmethod
-    def load(cls):
+    @abc.abstractmethod
+    def get_attributes(self):
         pass
 
     def __str__(self):
@@ -89,25 +92,29 @@ class ColumnProperty(abc.ABC):
 class CategoricalColumnProperty(ColumnProperty):
     type = _C.CATEGORICAL
 
-    def __init__(self, column_data: pd.Series,
-                 categories: Optional[List[Hashable]] = None):
+    def __init__(self,
+                 categories: Optional[List[Hashable]] = None,
+                 allow_missing: Optional[bool] = None):
         """
 
         Parameters
         ----------
-        column_data
-            The value counts
-        name
-            Name of the column
         categories
             The possible categories
+        allow_missing
+            Whether the categorical column is allowed to contain missing values
         """
-        super().__init__(column_data=column_data)
-        value_counts = column_data.value_counts()
-        if categories is None:
-            categories = sorted(list(value_counts.keys()))
-        self._vocab = Vocab(tokens=categories, unk_token=None)
-        self._freq = [value_counts[ele] for ele in categories]
+        super().__init__()
+        self._allow_missing = allow_missing
+        self._freq = None
+        if categories is not None:
+            assert allow_missing is not None
+            if allow_missing:
+                self._vocab = Vocab(categories)
+            else:
+                self._vocab = Vocab(categories, unk_token=None)
+        else:
+            self._vocab = None
 
     def transform(self, data: Hashable) -> int:
         """Transform the input data
@@ -149,15 +156,42 @@ class CategoricalColumnProperty(ColumnProperty):
 
     @property
     def categories(self):
-        return self._vocab.all_tokens
+        if self._vocab is None:
+            return None
+        else:
+            return self._vocab.non_special_tokens
 
     @property
     def frequencies(self):
         return self._freq
 
-    def parse_other(self, column_data: pd.Series):
-        return CategoricalColumnProperty(column_data=column_data,
-                                         categories=self.categories)
+    @property
+    def allow_missing(self):
+        return self._allow_missing
+
+    def parse(self, column_data: pd.Series):
+        super().parse(column_data=column_data)
+        if self._allow_missing is None:
+            if self.num_missing_sample > 0:
+                self._allow_missing = True
+            else:
+                self._allow_missing = False
+        value_counts = column_data.value_counts()
+        if self._vocab is None:
+            categories = sorted(list(value_counts.keys()))
+            if self._allow_missing:
+                self._vocab = Vocab(tokens=categories)
+            else:
+                self._vocab = Vocab(tokens=categories, unk_token=None)
+        self._freq = [value_counts[ele] for ele in self.categories]
+
+    def clone(self):
+        return CategoricalColumnProperty(categories=self.categories,
+                                         allow_missing=self.allow_missing)
+
+    def get_attributes(self):
+        return {'categories': self.categories,
+                'allow_missing': self.allow_missing}
 
     def info(self):
         return super().info(
@@ -169,35 +203,42 @@ class CategoricalColumnProperty(ColumnProperty):
 class NumericalColumnProperty(ColumnProperty):
     type = _C.NUMERICAL
 
-    def __init__(self, column_data: pd.Series,
-                 shape: Optional[Tuple] = None):
+    def __init__(self, shape: Optional[Tuple] = None):
         """
 
         Parameters
         ----------
-        column_data
-            Column data
         shape
             The shape of the numerical values
         """
-        super().__init__(column_data=column_data)
-        idx = column_data.first_valid_index()
-        val = column_data[idx]
-        inferred_shape = np.array(val).shape
-        if shape is not None:
-            assert shape == inferred_shape, 'Shape mismatch!. Expected shape={},' \
-                                     ' shape in the dataset is {}'.format(shape, inferred_shape)
-        self._shape = inferred_shape
+        super().__init__()
+        self._shape = shape
 
     def transform(self, ele):
-        return np.array(ele, dtype=np.float32)
+        if ele is None:
+            return np.full(shape=self.shape, fill_value=np.nan, dtype=np.float32)
+        else:
+            return np.array(ele, dtype=np.float32)
 
     @property
     def shape(self):
         return self._shape
 
-    def parse_other(self, column_data: pd.Series):
-        return NumericalColumnProperty(column_data=column_data, shape=self.shape)
+    def parse(self, column_data: pd.Series):
+        super().parse(column_data)
+        idx = column_data.first_valid_index()
+        val = column_data[idx]
+        inferred_shape = np.array(val).shape
+        if self._shape is not None:
+            assert self._shape == inferred_shape, 'Shape mismatch!. Expected shape={},' \
+                                     ' shape in the dataset is {}'.format(self._shape,
+                                                                          inferred_shape)
+
+    def clone(self):
+        return NumericalColumnProperty(shape=self.shape)
+
+    def get_attributes(self):
+        return {'shape': self.shape}
 
     def info(self):
         return super().info([('shape', self.shape)])
@@ -206,34 +247,19 @@ class NumericalColumnProperty(ColumnProperty):
 class TextColumnProperty(ColumnProperty):
     type = _C.TEXT
 
-    def __init__(self, column_data: pd.Series, lang=None):
+    def __init__(self, lang=None):
         """
 
         Parameters
         ----------
-        column_data
-            Column data
         lang
             The language of the text column
         """
-        super().__init__(column_data=column_data)
-        lengths = column_data.apply(len)
-        self._min_length = lengths.min()
-        self._avg_length = lengths.mean()
-        self._max_length = lengths.max()
-        self._num_samples = len(column_data)
-        if lang is not None:
-            self._lang = lang
-        else:
-            # Determine the language
-            sel_data = column_data[:100].tolist()
-            infer_lang_scores = map(lang_id, sel_data)
-            uniq_lang, counts = np.unique([dat[0] for dat in infer_lang_scores], return_counts=True)
-            self._lang = uniq_lang[counts.argmax()]
-
-    @property
-    def num_samples(self):
-        return self._num_samples
+        super().__init__()
+        self._lang = lang
+        self._min_length = None
+        self._max_length = None
+        self._avg_length = None
 
     @property
     def lang(self):
@@ -251,8 +277,24 @@ class TextColumnProperty(ColumnProperty):
     def avg_length(self):
         return self._avg_length
 
-    def parse_other(self, column_data: pd.Series):
-        return TextColumnProperty(column_data=column_data, lang=self.lang)
+    def parse(self, column_data: pd.Series):
+        super().parse(column_data)
+        lengths = column_data.apply(len)
+        self._min_length = lengths.min()
+        self._avg_length = lengths.mean()
+        self._max_length = lengths.max()
+        if self._lang is None:
+            # Determine the language
+            sel_data = column_data[:1000].tolist()
+            infer_lang_scores = map(lang_id, sel_data)
+            uniq_lang, counts = np.unique([dat[0] for dat in infer_lang_scores], return_counts=True)
+            self._lang = uniq_lang[counts.argmax()]
+
+    def clone(self):
+        return TextColumnProperty(lang=self._lang)
+
+    def get_attributes(self):
+        return {'lang': self._lang}
 
     def info(self):
         return super().info([('length, min/avg/max',
@@ -311,16 +353,14 @@ class EntityColumnProperty(ColumnProperty):
     """
     type = _C.ENTITY
 
-    def __init__(self, column_data, parent,
+    def __init__(self, parent,
                  label_type=None,
                  label_shape=None,
-                 label_vocab=None):
+                 label_keys=None):
         """
 
         Parameters
         ----------
-        column_data
-            Column data
         parent
             The column name of its parent
         label_type
@@ -331,72 +371,23 @@ class EntityColumnProperty(ColumnProperty):
             - numerical
         label_shape
             The shape of the label. Only be available when the entity contains numerical label
-        label_vocab
+        label_keys
             The vocabulary of the categorical label.
             It is only available when the entity contains categorical label.
         """
-        super().__init__(column_data=column_data)
+        super().__init__()
         self._parent = parent
         self._label_type = label_type
         self._label_shape = label_shape
-        self._label_vocab = label_vocab
+        if label_keys is not None:
+            self._label_vocab = Vocab(tokens=label_keys,
+                                      unk_token=None)
+        else:
+            self._label_vocab = None
         self._label_freq = None
-
-        # Store statistics
-        all_span_lengths = []
-        categorical_label_counter = collections.Counter()
-        for idx, entities in column_data.items():
-            if entities is None:
-                continue
-            if isinstance(entities, dict) or isinstance(entities, tuple):
-                entities = [entities]
-            assert isinstance(entities, list),\
-                'The entity type is "{}" and is not supported by ' \
-                'GluonNLP. Received entities={}'.format(type(entities), entities)
-            for entity in entities:
-                if isinstance(entity, dict):
-                    start = entity['start']
-                    end = entity['end']
-                    label = entity.get('label', None)
-                else:
-                    assert isinstance(entity, tuple)
-                    if len(entity) == 2:
-                        start, end = entity
-                        label = None
-                    else:
-                        start, end, label = entity
-                all_span_lengths.append(end - start)
-                label_type = _get_entity_label_type(label)
-                if label_type == _C.CATEGORICAL:
-                    categorical_label_counter[label] += 1
-                elif label_type == _C.NUMERICAL and self._label_shape is None:
-                    self._label_shape = np.array(label).shape
-                if self._label_type is not None:
-                    assert self._label_type == label_type, \
-                        'Unmatched label types. ' \
-                        'The type of labels of all entities should be consistent. ' \
-                        'Received label type="{}".' \
-                        ' Stored label_type="{}"'.format(label_type, self._label_type)
-                else:
-                    self._label_type = label_type
-        self._num_total_entity = len(all_span_lengths)
-        self._avg_entity_per_sample = len(all_span_lengths) / self.num_valid_sample
-        self._avg_span_length = np.mean(all_span_lengths).item()
-        if self._label_type == _C.CATEGORICAL:
-            if self._label_vocab is None:
-                keys = sorted(categorical_label_counter.keys())
-                self._label_vocab = Vocab(tokens=keys,
-                                          unk_token=None)
-                self._label_freq = [categorical_label_counter[ele] for ele in keys]
-            else:
-                for key in categorical_label_counter.keys():
-                    if key not in self._label_vocab:
-                        raise ValueError('The entity label="{}" is not found in the provided '
-                                         'vocabulary. The provided labels="{}"'
-                                         .format(key,
-                                                 self._label_vocab.all_tokens))
-                self._label_freq = [categorical_label_counter[ele]
-                                    for ele in self._label_vocab.all_tokens]
+        self._num_total_entity = None
+        self._avg_entity_per_sample = None
+        self._avg_span_length = None
 
     def transform(self,
                   data: Optional[Union[dict, List[dict],
@@ -462,6 +453,7 @@ class EntityColumnProperty(ColumnProperty):
         Returns
         -------
         ret
+            The label shape
         """
         return self._label_shape
 
@@ -494,7 +486,7 @@ class EntityColumnProperty(ColumnProperty):
         if self._label_vocab is None:
             return None
         else:
-            return self._label_vocab.all_tokens
+            return self._label_vocab.non_special_tokens
 
     @property
     def label_freq(self):
@@ -520,12 +512,75 @@ class EntityColumnProperty(ColumnProperty):
     def num_total_entity(self):
         return self._num_total_entity
 
-    def parse_other(self, column_data: pd.Series):
-        return EntityColumnProperty(column_data=column_data,
-                                    parent=self.parent,
+    def clone(self):
+        return EntityColumnProperty(parent=self.parent,
                                     label_type=self.label_type,
                                     label_shape=self.label_shape,
-                                    label_vocab=self._label_vocab)
+                                    label_keys=self.label_keys)
+
+    def get_attributes(self):
+        return {'parent': self.parent,
+                'label_type': self.label_type,
+                'label_shape': self.label_shape,
+                'label_keys': self.label_keys}
+
+    def parse(self, column_data: pd.Series):
+        super().parse(column_data)
+        # Store statistics
+        all_span_lengths = []
+        categorical_label_counter = collections.Counter()
+        for idx, entities in column_data.items():
+            if entities is None:
+                continue
+            if isinstance(entities, dict) or isinstance(entities, tuple):
+                entities = [entities]
+            assert isinstance(entities, list),\
+                'The entity type is "{}" and is not supported by ' \
+                'GluonNLP. Received entities={}'.format(type(entities), entities)
+            for entity in entities:
+                if isinstance(entity, dict):
+                    start = entity['start']
+                    end = entity['end']
+                    label = entity.get('label', None)
+                else:
+                    assert isinstance(entity, tuple)
+                    if len(entity) == 2:
+                        start, end = entity
+                        label = None
+                    else:
+                        start, end, label = entity
+                all_span_lengths.append(end - start)
+                label_type = _get_entity_label_type(label)
+                if label_type == _C.CATEGORICAL:
+                    categorical_label_counter[label] += 1
+                elif label_type == _C.NUMERICAL and self._label_shape is None:
+                    self._label_shape = np.array(label).shape
+                if self._label_type is not None:
+                    assert self._label_type == label_type, \
+                        'Unmatched label types. ' \
+                        'The type of labels of all entities should be consistent. ' \
+                        'Received label type="{}".' \
+                        ' Stored label_type="{}"'.format(label_type, self._label_type)
+                else:
+                    self._label_type = label_type
+        self._num_total_entity = len(all_span_lengths)
+        self._avg_entity_per_sample = len(all_span_lengths) / self.num_valid_sample
+        self._avg_span_length = np.mean(all_span_lengths).item()
+        if self._label_type == _C.CATEGORICAL:
+            if self._label_vocab is None:
+                keys = sorted(categorical_label_counter.keys())
+                self._label_vocab = Vocab(tokens=keys,
+                                          unk_token=None)
+                self._label_freq = [categorical_label_counter[ele] for ele in keys]
+            else:
+                for key in categorical_label_counter.keys():
+                    if key not in self._label_vocab:
+                        raise ValueError('The entity label="{}" is not found in the provided '
+                                         'vocabulary. The provided labels="{}"'
+                                         .format(key,
+                                                 self._label_vocab.all_tokens))
+                self._label_freq = [categorical_label_counter[ele]
+                                    for ele in self._label_vocab.all_tokens]
 
     def info(self):
         additional_attributes = [('parent', '"{}"'.format(self._parent)),
@@ -541,24 +596,3 @@ class EntityColumnProperty(ColumnProperty):
         elif self.label_type == _C.NUMERICAL:
             additional_attributes.append(('label_shape', self.label_shape))
         return super().info(additional_attributes)
-
-
-class ColumnProperties:
-    def __init__(self, col_props):
-        super().__init__()
-        self.data = col_props
-
-    def keys(self):
-        return self.data.keys()
-
-    def values(self):
-        return self.data.values()
-
-    def items(self):
-        return self.data.items()
-
-    def __str__(self):
-        pass
-
-    def to_json(self):
-        pass
