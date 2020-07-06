@@ -19,7 +19,8 @@ GLUE_TASKS_FOR_TEST = \
      ('qqp', ['sentence1', 'sentence2'], 'label', _C.CLASSIFICATION)]
 
 
-@pytest.mark.parametrize('task_name, feature_columns, label_columns,gt_problem_type', GLUE_TASKS_FOR_TEST)
+@pytest.mark.parametrize('task_name, feature_columns, label_columns,gt_problem_type',
+                         GLUE_TASKS_FOR_TEST)
 def test_bert_for_tabular_classification_v1(task_name, feature_columns, label_columns,
                                             gt_problem_type):
     if isinstance(label_columns, str):
