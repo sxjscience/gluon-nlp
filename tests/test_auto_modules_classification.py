@@ -8,7 +8,7 @@ from gluonnlp.auto.dataset import TabularDataset
 from gluonnlp.auto.preprocessing import TabularClassificationBERTPreprocessor
 from gluonnlp.cli.data.general_nlp_benchmark import prepare_glue
 from gluonnlp.auto import constants as _C
-from gluonnlp.auto.models.classification import BERTForTabularClassificationV1
+from gluonnlp.auto.modules.classification import BERTForTabularClassificationV1
 mx.npx.set_np()
 
 GLUE_TASKS_FOR_TEST = \
@@ -65,7 +65,7 @@ def test_bert_for_tabular_classification_v1(task_name, feature_columns, label_co
     dev_dataloader = DataLoader(dev_preprocessed, batch_size=2, shuffle=False,
                                 batchify_fn=preprocessor.batchify(is_test=False))
     test_dataloader = DataLoader(test_preprocessed, batch_size=2, shuffle=False,
-                                batchify_fn=preprocessor.batchify(is_test=True))
+                                 batchify_fn=preprocessor.batchify(is_test=True))
     feature_batch, label_batch = next(iter(train_dataloader))
     out = model(feature_batch)
     if problem_type == _C.CLASSIFICATION:

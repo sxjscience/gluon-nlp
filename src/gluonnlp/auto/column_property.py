@@ -379,6 +379,8 @@ class EntityColumnProperty(ColumnProperty):
         self._parent = parent
         self._label_type = label_type
         self._label_shape = label_shape
+        if self._label_shape is not None:
+            self._label_shape = tuple(self._label_shape)
         if label_keys is not None:
             self._label_vocab = Vocab(tokens=label_keys,
                                       unk_token=None)

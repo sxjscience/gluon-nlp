@@ -65,8 +65,7 @@ def base_cfg():
 class BertForTabularPrediction(BaseEstimator):
     def __init__(self, cfg=None):
         super().__init__(cfg=cfg)
-        self._fit_called = False
-        self._infered_problem = None
+        self._inferred_problem = None
         self.net = None
 
     @property

@@ -15,7 +15,7 @@ test_snli_df, test_snli_metadata = autonlp_snli_testdata()
 @pytest.mark.parametrize('merge_text', [False, True])
 def test_tabular_bert_preprocessor_case1(merge_text):
     _, tokenizer, _, _ = get_pretrained_bert()
-    dataset = TabularDataset(test_snli_df, metadata=test_snli_metadata)
+    dataset = TabularDataset(test_snli_df, column_metadata=test_snli_metadata)
     max_length = 60
     preprocessor = TabularClassificationBERTPreprocessor(tokenizer=tokenizer,
                                                          column_properties=dataset.column_properties,
