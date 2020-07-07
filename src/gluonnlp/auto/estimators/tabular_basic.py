@@ -312,7 +312,7 @@ def _classification_regression_predict(net, dataloader, problem_type, ctx_l,
 @use_np
 class BertForTabularPredictionBasic(BaseTabularEstimator):
     def __init__(self, cfg=None):
-        super().__init__(cfg=cfg)
+        super(BertForTabularPredictionBasic, self).__init__(cfg=cfg)
         self._called_fit = False
         self._problem_type = None
         self._label_shape = None

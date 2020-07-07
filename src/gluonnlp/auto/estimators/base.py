@@ -2,7 +2,7 @@ import abc
 
 
 class BaseTabularEstimator(abc.ABC):
-    def __init__(self, cfg):
+    def __init__(self, cfg=None):
         if cfg is None:
             cfg = self.get_cfg()
             self._cfg = cfg
