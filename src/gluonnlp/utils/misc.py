@@ -279,6 +279,10 @@ def parse_ctx(data_str):
     import mxnet as mx
     if data_str == '-1' or data_str == '':
         ctx_l = [mx.cpu()]
+    elif data_str.startswith('cpu'):
+        ctx_l = [mx.cpu()]
+    elif data_str.startswith('gpu'):
+        ctx_l = [mx.gpu(int(x[len('gpu'):])) for x in data_str.split(',')]
     else:
         ctx_l = [mx.gpu(int(x)) for x in data_str.split(',')]
     return ctx_l

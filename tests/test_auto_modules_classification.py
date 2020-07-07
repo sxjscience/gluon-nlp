@@ -5,10 +5,10 @@ import tempfile
 from mxnet.gluon.data import DataLoader
 from gluonnlp.models.bert import get_pretrained_bert, BertModel
 from gluonnlp.auto.dataset import TabularDataset
-from gluonnlp.auto.preprocessing import TabularClassificationBERTPreprocessor
+from gluonnlp.auto.preprocessing import TabularBasicBERTPreprocessor
 from gluonnlp.cli.data.general_nlp_benchmark import prepare_glue
 from gluonnlp.auto import constants as _C
-from gluonnlp.auto.modules.classification import BERTForTabularClassificationV1
+from gluonnlp.auto.modules.classification import BERTForTabularBasicV1
 mx.npx.set_np()
 
 GLUE_TASKS_FOR_TEST = \
@@ -46,19 +46,19 @@ def test_bert_for_tabular_classification_v1(task_name, feature_columns, label_co
     backbone = BertModel.from_cfg(cfg)
     backbone.load_parameters(param_path)
     column_properties = train_dataset.column_properties
-    preprocessor = TabularClassificationBERTPreprocessor(tokenizer=tokenizer,
-                                                         column_properties=column_properties,
-                                                         max_length=backbone.max_length,
-                                                         label_columns=label_columns[0],
-                                                         merge_text=True)
+    preprocessor = TabularBasicBERTPreprocessor(tokenizer=tokenizer,
+                                                column_properties=column_properties,
+                                                max_length=backbone.max_length,
+                                                label_columns=label_columns[0],
+                                                merge_text=True)
     problem_type, label_shape = train_dataset.infer_problem_type(label_columns[0])
     assert problem_type == gt_problem_type
     train_preprocessed = preprocessor.process_train(train_dataset.table)
     dev_preprocessed = preprocessor.process_train(dev_dataset.table)
     test_preprocessed = preprocessor.process_test(test_dataset.table)
-    model = BERTForTabularClassificationV1(text_backbone=backbone,
-                                           feature_field_info=preprocessor.feature_field_info(),
-                                           label_shape=label_shape)
+    model = BERTForTabularBasicV1(text_backbone=backbone,
+                                  feature_field_info=preprocessor.feature_field_info(),
+                                  label_shape=label_shape)
     model.hybridize()
     model.initialize()
     train_dataloader = DataLoader(train_preprocessed, batch_size=2, shuffle=False,

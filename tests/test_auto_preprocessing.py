@@ -3,7 +3,7 @@ import mxnet as mx
 from mxnet.gluon.data import DataLoader
 from gluonnlp.models.bert import get_pretrained_bert
 from gluonnlp.auto.dataset import TabularDataset
-from gluonnlp.auto.preprocessing import TabularClassificationBERTPreprocessor
+from gluonnlp.auto.preprocessing import TabularBasicBERTPreprocessor
 from gluonnlp.utils.testing import autonlp_snli_testdata
 from gluonnlp.utils.preprocessing import convert_token_level_span_to_char
 from gluonnlp.auto import constants as _C
@@ -17,11 +17,11 @@ def test_tabular_bert_preprocessor_case1(merge_text):
     _, tokenizer, _, _ = get_pretrained_bert()
     dataset = TabularDataset(test_snli_df, column_metadata=test_snli_metadata)
     max_length = 60
-    preprocessor = TabularClassificationBERTPreprocessor(tokenizer=tokenizer,
-                                                         column_properties=dataset.column_properties,
-                                                         max_length=max_length,
-                                                         label_columns='label',
-                                                         merge_text=merge_text)
+    preprocessor = TabularBasicBERTPreprocessor(tokenizer=tokenizer,
+                                                column_properties=dataset.column_properties,
+                                                max_length=max_length,
+                                                label_columns='label',
+                                                merge_text=merge_text)
     train_preprocessed = preprocessor.process_train(dataset.table)
     test_preprocessed = preprocessor.process_test(dataset.table)
     train_dataloader = DataLoader(train_preprocessed, batch_size=2, shuffle=False,

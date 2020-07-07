@@ -220,7 +220,7 @@ def process_text_entity_features(
     return text_features, entity_features
 
 
-class TabularClassificationBERTPreprocessor:
+class TabularBasicBERTPreprocessor:
     def __init__(self, *,
                  tokenizer,
                  column_properties,

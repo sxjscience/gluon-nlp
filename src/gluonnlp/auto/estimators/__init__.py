@@ -32,3 +32,5 @@ class BaseTabularEstimator(abc.ABC):
     @abc.abstractmethod
     def load(cls, dir_path):
         pass
+
+from . import tabular_basic

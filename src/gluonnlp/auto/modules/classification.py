@@ -260,7 +260,7 @@ class FeatureAggregator(HybridBlock):
 
 
 @use_np
-class BERTForTabularClassificationV1(HybridBlock):
+class BERTForTabularBasicV1(HybridBlock):
     """The basic model for tabular classification + regression with
     BERT (and its variants like ALBERT, MobileBERT, ELECTRA, etc.)
     as the backbone for handling text data.
@@ -300,8 +300,8 @@ class BERTForTabularClassificationV1(HybridBlock):
         """
         super().__init__(prefix=prefix, params=params)
         if cfg is None:
-            cfg = BERTForTabularClassificationV1.get_cfg()
-        self.cfg = BERTForTabularClassificationV1.get_cfg().clone_merge(cfg)
+            cfg = self.get_cfg()
+        self.cfg = self.get_cfg().clone_merge(cfg)
         assert self.cfg.TEXT_NET.pool_type == 'cls'
         feature_units = self.cfg.feature_units
         if feature_units == -1:
@@ -354,6 +354,12 @@ class BERTForTabularClassificationV1(HybridBlock):
             return cfg
         else:
             raise NotImplementedError
+
+    def initialize_with_pretrained_backbone(self, backbone_params_path, ctx=None, verbose=False):
+        self.text_backbone.load_parameters(backbone_params_path, ctx=ctx)
+        self.agg_layer.initialize(ctx=ctx)
+        self.categorical_networks.initialize(ctx=ctx)
+        self.numerical_networks.initialize(ctx=ctx)
 
     def hybrid_forward(self, F, features):
         """

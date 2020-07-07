@@ -1,5 +1,6 @@
 import collections
 import warnings
+import numpy as np
 import pandas as pd
 import json
 from . import constants as _C
@@ -64,6 +65,83 @@ def get_column_properties_from_metadata(metadata):
             raise KeyError('Column type is not supported.'
                            ' Type="{}"'.format(col_type))
     return column_properties
+
+
+def random_split_train_val(dataset, label, valid_ratio=0.15,
+                           stratified=False, num_repeats=1, rng=None):
+    """Randomly split a given dataset into train + valid dataset with stratified sampling.
+
+    Parameters
+    ----------
+    dataset
+    label
+    valid_ratio
+    stratified
+        Whether to use Stratified split.
+        If it's a categorical column, we will split based on the categorical value.
+    num_repeats
+        The number of repeats
+    rng
+        The random number generator
+
+    Returns
+    -------
+    ret
+        1. num_repeats == 1
+            train_dataset
+                The split training dataset
+            valid_dataset
+                The split validation dataset
+        2. num_repeats > 1
+            returns a list of (train_dataset, valid_dataset)
+    """
+    if rng is None:
+        rng = np.random.RandomState()
+    if not stratified:
+        num_total = len(dataset.table)
+        num_valid = np.ceil(num_total * valid_ratio).astype('int')
+        indices = np.arange(num_total)
+        if num_repeats == 1:
+            rng.shuffle(indices)
+            valid_indices = indices[:num_valid]
+            train_indices = indices[num_valid:]
+            train_dataset = TabularDataset(dataset.table.iloc[train_indices],
+                                           column_properties=dataset.column_properties)
+            valid_dataset = TabularDataset(dataset.table.iloc[valid_indices],
+                                           column_properties=dataset.column_properties)
+            return train_dataset, valid_dataset
+        else:
+            out = []
+            for i in range(num_repeats):
+                rng.shuffle(indices)
+                valid_indices = indices[:num_valid]
+                train_indices = indices[num_valid:]
+                train_dataset = TabularDataset(dataset.table.iloc[train_indices],
+                                               column_properties=dataset.column_properties)
+                valid_dataset = TabularDataset(dataset.table.iloc[valid_indices],
+                                               column_properties=dataset.column_properties)
+                out.append((train_dataset, valid_dataset))
+            return out
+    else:
+        raise NotImplementedError
+
+
+def kfold_split(dataset, label, n_folds=5, stratified=True, rng=None):
+    """
+
+    Parameters
+    ----------
+    dataset
+    label
+    n_folds
+    stratified
+    rng
+
+    Returns
+    -------
+
+    """
+    raise NotImplementedError
 
 
 def is_categorical_column(data: pd.Series,
@@ -319,6 +397,20 @@ class TabularDataset:
             json.dump(self.column_metadata(), of, ensure_ascii=False)
 
     def infer_problem_type(self, label_col_name):
+        """
+
+        Parameters
+        ----------
+        label_col_name
+            Name of the label column
+
+        Returns
+        -------
+        problem_type
+            Type of the problem
+        label_shape
+            Shape of the label
+        """
         if self.column_properties[label_col_name].type == _C.CATEGORICAL:
             return _C.CLASSIFICATION, self.column_properties[label_col_name].num_class
         elif self.column_properties[label_col_name].type == _C.NUMERICAL:

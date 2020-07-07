@@ -145,8 +145,4 @@ def test_superglue_datasets(task_name, feature_columns, label_columns):
             assert dev_data.column_properties[col_name].get_attributes()\
                    == train_data.column_properties[col_name].get_attributes()
             transformed_data = dev_data.table[col_name].apply(
-                column_properties.transform)
-
-
-def test_advanced_tabular_datasets():
-    pass
+                column_properties[col_name].transform)
