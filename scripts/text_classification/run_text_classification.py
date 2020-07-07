@@ -79,7 +79,7 @@ def train(args):
         cfg.merge_from_file(args.config_file)
     cfg.defrost()
     cfg.LEARNING.stop_metric = stop_metric
-    cfg.LEARNING.log_metrics = eval_metrics
+    cfg.LEARNING.log_metrics = ','.join(eval_metrics)
     if args.batch_size is not None:
         cfg.OPTIMIZATION.batch_size = args.batch_size
     if args.exp_dir is not None:
