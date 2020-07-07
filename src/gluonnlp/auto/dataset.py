@@ -5,7 +5,7 @@ import json
 from . import constants as _C
 from .column_property import CategoricalColumnProperty, EntityColumnProperty,\
                              TextColumnProperty, NumericalColumnProperty
-from ..base import INT_TYPES, FLOAT_TYPES
+from ..base import INT_TYPES, FLOAT_TYPES, BOOL_TYPES
 from typing import List, Optional, Union, Dict, Tuple
 
 
@@ -114,7 +114,7 @@ def is_categorical_column(data: pd.Series,
             return True, False
         else:
             return False, False
-    elif isinstance(element, bool):
+    elif isinstance(element, BOOL_TYPES):
         return True, False
     else:
         return False, False

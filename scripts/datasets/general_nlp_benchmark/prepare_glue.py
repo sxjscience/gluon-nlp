@@ -537,11 +537,15 @@ def format_mrpc(data_dir):
     os.makedirs(mrpc_dir, exist_ok=True)
     mrpc_train_file = os.path.join(mrpc_dir, "msr_paraphrase_train.txt")
     mrpc_test_file = os.path.join(mrpc_dir, "msr_paraphrase_test.txt")
-    download(GLUE_TASK2PATH["mrpc"]['train'], mrpc_train_file)
-    download(GLUE_TASK2PATH["mrpc"]['test'], mrpc_test_file)
+    download(GLUE_TASK2PATH["mrpc"]['train'], mrpc_train_file,
+             sha1_hash=_URL_FILE_STATS[GLUE_TASK2PATH["mrpc"]['train']])
+    download(GLUE_TASK2PATH["mrpc"]['test'], mrpc_test_file,
+             sha1_hash=_URL_FILE_STATS[GLUE_TASK2PATH["mrpc"]['test']])
     assert os.path.isfile(mrpc_train_file), "Train data not found at %s" % mrpc_train_file
     assert os.path.isfile(mrpc_test_file), "Test data not found at %s" % mrpc_test_file
-    download(GLUE_TASK2PATH["mrpc"]['dev'], os.path.join(mrpc_dir, "dev_ids.tsv"))
+    download(GLUE_TASK2PATH["mrpc"]['dev'],
+             os.path.join(mrpc_dir, "dev_ids.tsv"),
+             sha1_hash=_URL_FILE_STATS[GLUE_TASK2PATH["mrpc"]['dev']])
 
     dev_ids = []
     with open(os.path.join(mrpc_dir, "dev_ids.tsv"), encoding="utf8") as ids_fh:
@@ -637,9 +641,11 @@ def main(args):
                 base_dir = os.path.join(args.data_dir, 'rte_diagnostic')
                 os.makedirs(base_dir, exist_ok=True)
                 download(TASK2PATH['diagnostic'][0],
-                         path=os.path.join(base_dir, 'diagnostic.tsv'))
+                         path=os.path.join(base_dir, 'diagnostic.tsv'),
+                         sha1_hash=_URL_FILE_STATS[TASK2PATH['diagnostic'][0]])
                 download(TASK2PATH['diagnostic'][1],
-                         path=os.path.join(base_dir, 'diagnostic-full.tsv'))
+                         path=os.path.join(base_dir, 'diagnostic-full.tsv'),
+                         sha1_hash=_URL_FILE_STATS[TASK2PATH['diagnostic'][1]])
                 df = reader(base_dir)
                 df.to_pickle(os.path.join(base_dir, 'diagnostic-full.pd.pkl'))
             else:
@@ -648,7 +654,7 @@ def main(args):
                     data_file = os.path.join(args.cache_path, "{}.zip".format(key))
                     url = TASK2PATH[key]
                     reader = TASK2READER[key]
-                    download(url, data_file)
+                    download(url, data_file, sha1_hash=_URL_FILE_STATS[url])
                     with zipfile.ZipFile(data_file) as zipdata:
                         zipdata.extractall(args.data_dir)
                     df = reader(os.path.join(args.data_dir, name))
@@ -668,7 +674,7 @@ def main(args):
             data_file = os.path.join(args.cache_path, "{}.zip".format(task))
             url = TASK2PATH[task]
             reader = TASK2READER[task]
-            download(url, data_file)
+            download(url, data_file, sha1_hash=_URL_FILE_STATS[url])
             base_dir = os.path.join(args.data_dir, task)
             zip_dir_name = None
             with zipfile.ZipFile(data_file) as zipdata:

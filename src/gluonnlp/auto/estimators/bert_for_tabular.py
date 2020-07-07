@@ -1,7 +1,7 @@
 from ..modules.classification import BERTForTabularClassificationV1
 from ...utils.config import CfgNode
 from ...utils.misc import set_seed
-from . import BaseEstimator
+from . import BaseTabularEstimator
 from ..dataset import TabularDataset
 
 
@@ -10,8 +10,6 @@ def base_optimization_config():
     cfg.lr_scheduler = 'poly_scheduler'
     cfg.optimizer = 'adamw'
     cfg.early_stopping = False  # Whether to use early stopping
-    cfg.early_stop_val_split_ratio = 0.1  # The ratio of training data to split
-                                          # if there is no validation data
     cfg.model_average = 10      # When this value is larger than 1, we will use
     cfg.optimizer_params = [('beta1', 0.9),
                             ('beta2', 0.999),
@@ -47,6 +45,12 @@ def base_tabular_model_config():
     return cfg
 
 
+def base_learning_config():
+    cfg = CfgNode()
+    cfg.valid_ratio = 0.1       # The ratio of to split the validation data
+    return cfg
+
+
 def base_misc_config():
     cfg = CfgNode()
     cfg.seed = 123
@@ -64,7 +68,7 @@ def base_cfg():
     return cfg
 
 
-class BertForTabularClassification(BaseEstimator):
+class BertForTabularClassification(BaseTabularEstimator):
     def __init__(self, cfg=None):
         super().__init__(cfg=cfg)
         self._inferred_problem = None
@@ -110,6 +114,10 @@ class BertForTabularClassification(BaseEstimator):
         if not isinstance(train_data, TabularDataset):
             train_data = TabularDataset(train_data, label_columns=label)
         column_properties = train_data.column_properties
+        if valid_data is None:
+            train_table =
+            valid_table =
+
 
     def predict_proba(self, test_data):
 

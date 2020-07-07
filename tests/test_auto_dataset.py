@@ -1,6 +1,7 @@
 import os
 import tempfile
 import pytest
+import multiprocessing as mp
 from gluonnlp.auto import constants as _C
 from gluonnlp.auto.dataset import TabularDataset
 from gluonnlp.utils.testing import autonlp_snli_testdata
@@ -127,19 +128,24 @@ def test_superglue_datasets(task_name, feature_columns, label_columns):
         # We test for the parsing
         train_data = TabularDataset(train_path,
                                     column_metadata=metadata_path)
+        column_properties = train_data.column_properties
         dev_data = TabularDataset(dev_path,
-                                  column_properties=train_data.column_properties,
+                                  column_properties=column_properties,
                                   column_metadata=metadata_path)
         test_data = TabularDataset(test_path,
-                                   column_properties=train_data.column_properties)
+                                   column_properties=column_properties)
         assert train_data.column_properties[label_columns].type == expected_label_type
         assert dev_data.column_properties[label_columns].type == expected_label_type
         for col_name in test_data.columns:
             assert test_data.column_properties[col_name].get_attributes()\
                    == train_data.column_properties[col_name].get_attributes()
+            transformed_data = test_data.table[col_name].apply(
+                column_properties[col_name].transform)
         for col_name in dev_data.columns:
             assert dev_data.column_properties[col_name].get_attributes()\
                    == train_data.column_properties[col_name].get_attributes()
+            transformed_data = dev_data.table[col_name].apply(
+                column_properties.transform)
 
 
 def test_advanced_tabular_datasets():
