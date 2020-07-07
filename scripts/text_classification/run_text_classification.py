@@ -10,15 +10,15 @@ mx.npx.set_np()
 
 TASKS = \
     {'cola': ('sentence', 'label', 'mcc', ['mcc']),
-     'sst': ('sentence', 'label', 'accuracy', ['mcc']),
-     'mrpc': (['sentence1', 'sentence2'], 'label', 'f1', ['accuracy', 'f1']),
+     'sst': ('sentence', 'label', 'acc', ['acc']),
+     'mrpc': (['sentence1', 'sentence2'], 'label', 'f1', ['acc', 'f1']),
      'sts': (['sentence1', 'sentence2'], 'score', 'pearsonr', ['pearsonr', 'spearmanr']),
-     'qqp': (['sentence1', 'sentence2'], 'label', 'f1', ['accuracy', 'f1']),
-     'mnli': (['sentence1', 'sentence2'], 'accuracy', ['accuracy']),
-     'qnli': (['question', 'sentence'], 'accuracy', ['accuracy']),
-     'rte': (['sentence1', 'sentence2'], 'accuracy', ['accuracy']),
-     'wnli': (['sentence1', 'sentence2'], 'accuracy', ['accuracy']),
-     'snli': (['sentence1', 'sentence2'], 'accuracy', ['accuracy'])}
+     'qqp': (['sentence1', 'sentence2'], 'label', 'f1', ['acc', 'f1']),
+     'mnli': (['sentence1', 'sentence2'], 'acc', ['acc']),
+     'qnli': (['question', 'sentence'], 'acc', ['acc']),
+     'rte': (['sentence1', 'sentence2'], 'acc', ['acc']),
+     'wnli': (['sentence1', 'sentence2'], 'acc', ['acc']),
+     'snli': (['sentence1', 'sentence2'], 'acc', ['acc'])}
 
 
 def parse_args():

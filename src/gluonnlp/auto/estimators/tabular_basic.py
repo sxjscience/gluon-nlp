@@ -185,11 +185,11 @@ def infer_stop_eval_metrics(problem_type, label_shape):
     log_metrics
     """
     if problem_type == _C.CLASSIFICATION:
-        stop_metric = 'accuracy'
+        stop_metric = 'acc'
         if label_shape == 2:
-            log_metrics = ['f1', 'mcc', 'auc', 'accuracy', 'nll']
+            log_metrics = ['f1', 'mcc', 'auc', 'acc', 'nll']
         else:
-            log_metrics = ['accuracy', 'nll']
+            log_metrics = ['acc', 'nll']
     elif problem_type == _C.REGRESSION:
         stop_metric = 'mse'
         log_metrics = ['mse', 'rmse', 'mae']
