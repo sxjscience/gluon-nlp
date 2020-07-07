@@ -1,5 +1,6 @@
 import mxnet as mx
 import os
+import pandas as pd
 import json
 import argparse
 import numpy as np
@@ -101,8 +102,8 @@ def train(args):
     with open(os.path.join(cfg.MISC.exp_dir, 'final_model_dev_score.json'), 'w') as of:
         json.dump(dev_metrics_scores, of)
     test_prediction = model.predict(test_data)
-    np.savetxt(os.path.join(cfg.MISC.exp_dir, 'test_predictions.txt'),
-               test_prediction)
+    test_prediction = pd.Series(test_prediction, index=label_columns)
+    test_prediction.to_csv(os.path.join(cfg.MISC.exp_dir, 'test_predictions.csv'))
 
 
 def predict(args):
