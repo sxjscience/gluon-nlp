@@ -145,7 +145,7 @@ def base_tabular_model_config():
 def base_learning_config():
     cfg = CfgNode()
     cfg.early_stopping = False  # Whether to use early stopping
-    cfg.save_strategy = 'best'  # Can be 'best', 'last', 'average_5'
+    cfg.save_strategy = 'best'  # Can be 'best', or 'swa'
     cfg.valid_ratio = 0.15      # The ratio of dataset to split for validation
     cfg.stop_metric = 'auto'   # Automatically define the stopping metric
     cfg.log_metrics = 'auto'    # Automatically determine the metrics used in logging
@@ -495,6 +495,7 @@ class BertForTabularPredictionBasic(BaseTabularEstimator):
                                               + log_metrics + ['find_better', 'time_spent']) + '\n')
         mx.npx.waitall()
         save_strategy = cfg.LEARNING.save_strategy.split(',')
+
         for update_idx in range(max_update):
             num_samples_per_update_l = [0 for _ in ctx_l]
             for accum_idx in range(cfg.OPTIMIZATION.num_accumulated):
@@ -560,17 +561,18 @@ class BertForTabularPredictionBasic(BaseTabularEstimator):
                                                         predictions=dev_predictions,
                                                         gt_labels=gt_dev_labels)
                 valid_time_spent = time.time() - valid_start_tick
-                np.savez_compressed(os.path.join(exp_dir,
-                                                 'iter{}_prediction.npy'.format(update_idx + 1)),
-                                    dev_predictions)
+                np.save(os.path.join(
+                    exp_dir,
+                    'iter{:07d}_prediction.npy'.format(update_idx + 1)),
+                    dev_predictions)
                 if best_dev_metric is None or is_better_score(stop_metric,
                                                               best_dev_metric,
                                                               metric_scores[stop_metric]):
                     find_better = True
                 else:
                     find_better = False
-                if find_better and save_strategy == 'best':
-                    net.save_parameters(os.path.join(exp_dir, 'model.params'))
+                if find_better and 'best' in save_strategy:
+                    net.save_parameters(os.path.join(exp_dir, 'best_model.params'))
                 loss_string = ', '.join(['{}={}'.format(key, metric_scores[key])
                                          for key in log_metrics])
                 logging.info('[Iter {}/{}, Epoch {}] valid {}, time spent={}'.format(
@@ -581,10 +583,8 @@ class BertForTabularPredictionBasic(BaseTabularEstimator):
                               int(update_idx / updates_per_epoch)]
                         + [metric_scores[key] for key in log_metrics]
                         + [find_better, valid_time_spent])) + '\n')
-        if save_strategy == 'last':
-            net.save_parameters(os.path.join(exp_dir, 'model.params'))
-        if save_strategy != 'last':
-            net.load_parameters(filename=os.path.join(exp_dir, 'model.params'))
+        # TODO(sxjscience) Add SWA
+        net.load_parameters(filename=os.path.join(exp_dir, 'best_model.params'))
         self._net = net
 
     def evaluate(self, valid_data, metrics):
