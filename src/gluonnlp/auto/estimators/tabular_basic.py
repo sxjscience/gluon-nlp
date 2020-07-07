@@ -19,9 +19,9 @@ from ..modules.classification import BERTForTabularBasicV1
 from ...utils.config import CfgNode
 from ...utils.misc import set_seed, logging_config, parse_ctx, grouper, count_parameters, repeat
 from ...utils.parameter import move_to_ctx, clip_grad_global_norm
-from . import BaseTabularEstimator
+from .base import BaseTabularEstimator
 from ..dataset import TabularDataset, random_split_train_val
-
+s
 
 @use_np
 def get_optimizer(cfg, updates_per_epoch):
