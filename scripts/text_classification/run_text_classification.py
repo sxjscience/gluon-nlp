@@ -1,26 +1,10 @@
-import pickle
-import time
 import mxnet as mx
 import os
-import math
-import logging
-import pandas as pd
 import json
 import argparse
 import numpy as np
-from sklearn.metrics import accuracy_score, f1_score, matthews_corrcoef, roc_auc_score
-from scipy.stats import pearsonr
-from mxnet.lr_scheduler import PolyScheduler, CosineScheduler
-from gluonnlp.lr_scheduler import InverseSquareRootScheduler
-from mxnet.gluon.data import DataLoader
-from gluonnlp.auto import constants as _C
-from gluonnlp.auto.dataset import TabularDataset, load_pandas_df
+from gluonnlp.auto.dataset import load_pandas_df
 from gluonnlp.auto.estimators.tabular_basic import BertForTabularPredictionBasic
-from gluonnlp.models import get_backbone
-from gluonnlp.utils.config import CfgNode
-from gluonnlp.utils.misc import parse_ctx, set_seed, grouper, repeat,\
-    logging_config, count_parameters
-from gluonnlp.utils.parameter import move_to_ctx, clip_grad_global_norm
 mx.npx.set_np()
 
 
@@ -108,7 +92,7 @@ def train(args):
     test_data = load_pandas_df(args.test_file)
     train_data = train_data[all_columns]
     dev_data = dev_data[all_columns]
-    test_data = test_data[all_columns]
+    test_data = test_data[feature_columns]
     model = BertForTabularPredictionBasic(cfg)
     model.fit(train_data=train_data, label=label_columns)
     dev_metrics_scores = model.evaluate(dev_data, metrics=eval_metrics)
