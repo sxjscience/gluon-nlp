@@ -5,6 +5,7 @@ import json
 import collections
 from typing import List, Optional, Union, Tuple, Hashable
 from . import constants as _C
+from ..base import INT_TYPES
 from ..data.vocab import Vocab
 from ..data.filtering import LanguageIdentifier
 __all__ = ['CategoricalColumnProperty',
@@ -93,7 +94,7 @@ class CategoricalColumnProperty(ColumnProperty):
     type = _C.CATEGORICAL
 
     def __init__(self,
-                 categories: Optional[List[Hashable]] = None,
+                 categories: Optional[List[Union[int, bool, str]]] = None,
                  allow_missing: Optional[bool] = None):
         """
 
@@ -108,6 +109,8 @@ class CategoricalColumnProperty(ColumnProperty):
         self._allow_missing = allow_missing
         self._freq = None
         if categories is not None:
+            if isinstance(categories[0], INT_TYPES):
+                categories = [int(ele) for ele in categories]
             assert allow_missing is not None
             if allow_missing:
                 self._vocab = Vocab(categories)
@@ -183,6 +186,8 @@ class CategoricalColumnProperty(ColumnProperty):
         value_counts = column_data.value_counts()
         if self._vocab is None:
             categories = sorted(list(value_counts.keys()))
+            if isinstance(categories[0], INT_TYPES):
+                categories = [int(ele) for ele in categories]
             if self._allow_missing:
                 self._vocab = Vocab(tokens=categories)
             else:

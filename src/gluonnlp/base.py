@@ -23,7 +23,7 @@ import numpy as np
 
 __all__ = ['get_home_dir', 'get_data_home_dir']
 
-INT_TYPES = (int, np.int32, np.int64)
+INT_TYPES = (int, np.uint8, np.int8, np.int32, np.int64)
 FLOAT_TYPES = (float, np.float16, np.float32, np.float64)
 
 

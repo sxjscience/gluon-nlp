@@ -1,7 +1,7 @@
 import abc
 
 
-class BaseEstimator(abc.ABC):
+class BaseTabularEstimator(abc.ABC):
     def __init__(self, cfg):
         if cfg is None:
             cfg = self.get_cfg()
@@ -17,11 +17,11 @@ class BaseEstimator(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def fit(self, train_data, valid_data=None, **kwargs):
+    def fit(self, train_data, label, valid_data=None):
         pass
 
     @abc.abstractmethod
-    def predict(self, test_data, **kwargs):
+    def predict(self, test_data):
         pass
 
     @abc.abstractmethod

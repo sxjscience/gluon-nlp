@@ -10,6 +10,8 @@ def base_optimization_config():
     cfg.lr_scheduler = 'poly_scheduler'
     cfg.optimizer = 'adamw'
     cfg.early_stopping = False  # Whether to use early stopping
+    cfg.early_stop_val_split_ratio = 0.1  # The ratio of training data to split
+                                          # if there is no validation data
     cfg.model_average = 10      # When this value is larger than 1, we will use
     cfg.optimizer_params = [('beta1', 0.9),
                             ('beta2', 0.999),
@@ -62,7 +64,7 @@ def base_cfg():
     return cfg
 
 
-class BertForTabularPrediction(BaseEstimator):
+class BertForTabularClassification(BaseEstimator):
     def __init__(self, cfg=None):
         super().__init__(cfg=cfg)
         self._inferred_problem = None
@@ -90,7 +92,7 @@ class BertForTabularPrediction(BaseEstimator):
         else:
             raise NotImplementedError
 
-    def fit(self, train_data, valid_data=None, label=None):
+    def fit(self, train_data, label, valid_data=None):
         """
 
         Parameters
@@ -103,14 +105,16 @@ class BertForTabularPrediction(BaseEstimator):
         label
             The label column
         """
+        assert label is not None
         set_seed(self.cfg.MISC.seed)
         if not isinstance(train_data, TabularDataset):
-            train_data = TabularDataset(train_data)
+            train_data = TabularDataset(train_data, label_columns=label)
         column_properties = train_data.column_properties
+
+    def predict_proba(self, test_data):
 
 
     def predict(self, test_data):
-        assert self.
         pass
 
     def save(self, file_path):
@@ -119,4 +123,12 @@ class BertForTabularPrediction(BaseEstimator):
     @classmethod
     def load(cls, file_path):
         pass
+
+
+
+class BERTForTabularRegression(BaseEstimator):
+    def __init__(self, cfg=None):
+        super().__init__(cfg=cfg)
+        self._inferred_problem = None
+        self.net = None
 

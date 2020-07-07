@@ -98,8 +98,8 @@ def is_categorical_column(data: pd.Series,
     """
     threshold = min(int(len(data) * ratio), threshold)
     sample_set = set()
-    dtype = type(data[data.first_valid_index])
-    if isinstance(dtype, str):
+    element = data.iloc[data.first_valid_index()]
+    if isinstance(element, str):
         for idx, sample in data.items():
             sample_set.add(sample)
             if len(sample_set) > threshold:
@@ -108,13 +108,13 @@ def is_categorical_column(data: pd.Series,
             return True, False
         else:
             return True, default_allow_missing
-    elif isinstance(dtype, int):
+    elif isinstance(element, INT_TYPES):
         value_counts = data.value_counts()
-        if data.min() == 0 and data.max() == len(value_counts) - 1:
+        if value_counts.keys().min() == 0 and value_counts.keys().max() == len(value_counts) - 1:
             return True, False
         else:
             return False, False
-    elif isinstance(dtype, bool):
+    elif isinstance(element, bool):
         return True, False
     else:
         return False, False
@@ -201,7 +201,7 @@ def get_column_properties(
     return column_properties
 
 
-def normalize_df(df, convert_text_to_numerical=False, remove_none=True):
+def normalize_df(df, convert_text_to_numerical=True, remove_none=True):
     """Try to convert the text columns in the input data-frame to numerical columns
 
     Parameters
@@ -231,8 +231,8 @@ def normalize_df(df, convert_text_to_numerical=False, remove_none=True):
                     conversion_cols[col_name] = col
                 if convert_text_to_numerical:
                     try:
-                        col = pd.to_numeric(col)
-                        conversion_cols[col_name] = col
+                        new_col = pd.to_numeric(col)
+                        conversion_cols[col_name] = new_col
                     except Exception:
                         pass
                     finally:
