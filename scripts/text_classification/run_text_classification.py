@@ -14,11 +14,11 @@ TASKS = \
      'mrpc': (['sentence1', 'sentence2'], 'label', 'f1', ['acc', 'f1']),
      'sts': (['sentence1', 'sentence2'], 'score', 'spearmanr', ['pearsonr', 'spearmanr']),
      'qqp': (['sentence1', 'sentence2'], 'label', 'f1', ['acc', 'f1']),
-     'mnli': (['sentence1', 'sentence2'], 'acc', ['acc']),
-     'qnli': (['question', 'sentence'], 'acc', ['acc']),
-     'rte': (['sentence1', 'sentence2'], 'acc', ['acc']),
-     'wnli': (['sentence1', 'sentence2'], 'acc', ['acc']),
-     'snli': (['sentence1', 'sentence2'], 'acc', ['acc'])}
+     'mnli': (['sentence1', 'sentence2'], 'label', 'acc', ['acc']),
+     'qnli': (['question', 'sentence'], 'label', 'acc', ['acc']),
+     'rte': (['sentence1', 'sentence2'], 'label', 'acc', ['acc']),
+     'wnli': (['sentence1', 'sentence2'], 'label', 'acc', ['acc']),
+     'snli': (['sentence1', 'sentence2'], 'label', 'acc', ['acc'])}
 
 
 def parse_args():
