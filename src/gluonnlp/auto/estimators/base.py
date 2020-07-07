@@ -2,17 +2,10 @@ import abc
 
 
 class BaseTabularEstimator(abc.ABC):
-    def __init__(self, cfg=None):
-        if cfg is None:
-            cfg = BaseTabularEstimator.get_cfg()
-            self._cfg = cfg
-        else:
-            base_cfg = BaseTabularEstimator.get_cfg()
-            self._cfg = base_cfg.clone_merge(cfg)
-
     @property
+    @abc.abstractmethod
     def cfg(self):
-        return self._cfg
+        pass
 
     @staticmethod
     @abc.abstractmethod

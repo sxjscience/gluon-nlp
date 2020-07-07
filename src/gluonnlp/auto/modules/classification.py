@@ -300,8 +300,8 @@ class BERTForTabularBasicV1(HybridBlock):
         """
         super().__init__(prefix=prefix, params=params)
         if cfg is None:
-            cfg = self.get_cfg()
-        self.cfg = self.get_cfg().clone_merge(cfg)
+            cfg = BERTForTabularBasicV1.get_cfg()
+        self.cfg = BERTForTabularBasicV1.get_cfg().clone_merge(cfg)
         assert self.cfg.TEXT_NET.pool_type == 'cls'
         feature_units = self.cfg.feature_units
         if feature_units == -1:
