@@ -104,7 +104,6 @@ def apply_layerwise_decay(model, layerwise_decay, not_included=None):
             value.lr_mult = layerwise_decay**(max_depth - (layer_depth + 1))
 
 
-
 def base_optimization_config():
     cfg = CfgNode()
     cfg.lr_scheduler = 'poly_scheduler'
