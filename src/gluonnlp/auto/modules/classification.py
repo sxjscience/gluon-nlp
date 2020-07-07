@@ -102,8 +102,8 @@ class CategoricalFeatureNet(HybridBlock):
     def get_cfg(key=None):
         if key is None:
             cfg = CfgNode()
-            cfg.emb_units = 64
-            cfg.mid_units = 128
+            cfg.emb_units = 32
+            cfg.mid_units = 64
             cfg.num_layers = 1
             cfg.data_dropout = False
             cfg.dropout = 0.1
@@ -136,8 +136,7 @@ class NumericalFeatureNet(HybridBlock):
         bias_initializer = mx.init.create(*cfg.INITIALIZER.bias)
         with self.name_scope():
             if self.cfg.input_centering:
-                self.data_bn = nn.BatchNorm(in_channels=self.in_units,
-                                            use_global_stats=True)
+                self.data_bn = nn.BatchNorm(in_channels=self.in_units)
             self.proj = BasicMLP(in_units=self.in_units,
                                  mid_units=cfg.mid_units,
                                  out_units=out_units,
@@ -169,8 +168,8 @@ class NumericalFeatureNet(HybridBlock):
             raise NotImplementedError
         return cfg
 
-    def hybrid_forward(self, F, feature):
-        feature = F.np.reshap(feature, (-1, self.in_units))
+    def hybrid_forward(self, F, features):
+        feature = F.np.reshap(features, (-1, self.in_units))
         if self.cfg.input_centering:
             feature = self.data_bn(feature)
         return self.proj(feature)

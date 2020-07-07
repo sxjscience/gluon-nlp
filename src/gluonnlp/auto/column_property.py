@@ -148,6 +148,10 @@ class CategoricalColumnProperty(ColumnProperty):
     def num_class(self):
         return len(self._vocab)
 
+    @property
+    def num_non_special_class(self):
+        return len(self._vocab.non_special_tokens)
+
     def to_idx(self, item):
         return self._vocab[item]
 
@@ -183,7 +187,7 @@ class CategoricalColumnProperty(ColumnProperty):
                 self._vocab = Vocab(tokens=categories)
             else:
                 self._vocab = Vocab(tokens=categories, unk_token=None)
-        self._freq = [value_counts[ele] for ele in self.categories]
+        self._freq = [value_counts[ele] if ele in value_counts else 0 for ele in self.categories]
 
     def clone(self):
         return CategoricalColumnProperty(categories=self.categories,
@@ -195,7 +199,8 @@ class CategoricalColumnProperty(ColumnProperty):
 
     def info(self):
         return super().info(
-            [('num_class', self.num_class),
+            [('num_class (total/non_special)', '{}/{}'.format(self.num_class,
+                                                              self.num_non_special_class)),
              ('categories', self.categories),
              ('freq', self.frequencies)])
 
