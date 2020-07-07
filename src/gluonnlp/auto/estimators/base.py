@@ -4,10 +4,10 @@ import abc
 class BaseTabularEstimator(abc.ABC):
     def __init__(self, cfg=None):
         if cfg is None:
-            cfg = self.get_cfg()
+            cfg = BaseTabularEstimator.get_cfg()
             self._cfg = cfg
         else:
-            base_cfg = self.get_cfg()
+            base_cfg = BaseTabularEstimator.get_cfg()
             self._cfg = base_cfg.clone_merge(cfg)
 
     @property
