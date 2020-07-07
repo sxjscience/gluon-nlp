@@ -32,7 +32,7 @@ python run_text_classification.py \
 
 
 ```bash
-for TASK in cola sst mrpc qqp qnli rte wnli
+for TASK in cola sst mrpc sts qqp qnli rte wnli
 do
     TRAIN_FILE=glue/${TASK}/train.pd.pkl
     DEV_FILE=glue/${TASK}/dev.pd.pkl

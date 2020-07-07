@@ -12,7 +12,7 @@ TASKS = \
     {'cola': ('sentence', 'label', 'mcc', ['mcc']),
      'sst': ('sentence', 'label', 'acc', ['acc']),
      'mrpc': (['sentence1', 'sentence2'], 'label', 'f1', ['acc', 'f1']),
-     'sts': (['sentence1', 'sentence2'], 'score', 'pearsonr', ['pearsonr', 'spearmanr']),
+     'sts': (['sentence1', 'sentence2'], 'score', 'spearmanr', ['pearsonr', 'spearmanr']),
      'qqp': (['sentence1', 'sentence2'], 'label', 'f1', ['acc', 'f1']),
      'mnli': (['sentence1', 'sentence2'], 'acc', ['acc']),
      'qnli': (['question', 'sentence'], 'acc', ['acc']),

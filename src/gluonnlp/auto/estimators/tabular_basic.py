@@ -262,7 +262,7 @@ def is_better_score(metric_name, baseline, new_score):
     -------
     ret
     """
-    if metric_name in ['acc', 'f1', 'mcc', 'auc', 'pearsonr']:
+    if metric_name in ['acc', 'f1', 'mcc', 'auc', 'pearsonr', 'spearmanr']:
         return new_score > baseline
     elif metric_name in ['mse', 'rmse', 'mae']:
         return new_score < baseline
@@ -381,9 +381,25 @@ class BertForTabularPredictionBasic(BaseTabularEstimator):
             train_data = TabularDataset(train_data, label_columns=label)
         column_properties = train_data.column_properties
         self._column_properties = column_properties
+
+        # Get the problem type + shape + metrics
         problem_type, label_shape = train_data.infer_problem_type(label_col_name=label)
         self._problem_type = problem_type
         self._label_shape = label_shape
+        logging.info('Problem Type={}, Label Shape={}'.format(problem_type, label_shape))
+        inferred_stop_metric, inferred_log_metrics = infer_stop_eval_metrics(self.problem_type,
+                                                                             self.label_shape)
+        if cfg.LEARNING.stop_metric == 'auto':
+            stop_metric = inferred_stop_metric
+        else:
+            stop_metric = cfg.LEARNING.stop_metric
+        if cfg.LEARNING.log_metrics == 'auto':
+            log_metrics = inferred_log_metrics
+        else:
+            log_metrics = cfg.LEARNING.log_metrics.split(',')
+        if stop_metric not in log_metrics:
+            log_metrics.append(stop_metric)
+        logging.info('Stop Metric={}, Log Metrics={}'.format(stop_metric, log_metrics))
         if valid_data is None:
             train_data, valid_data = random_split_train_val(
                 train_data,
@@ -435,19 +451,6 @@ class BertForTabularPredictionBasic(BaseTabularEstimator):
                                     batch_size=inference_batch_size,
                                     shuffle=False,
                                     batchify_fn=preprocessor.batchify(is_test=True))
-        # Get the metrics
-        inferred_stop_metric, inferred_log_metrics = infer_stop_eval_metrics(self.problem_type,
-                                                                             self.label_shape)
-        if cfg.LEARNING.stop_metric == 'auto':
-            stop_metric = inferred_stop_metric
-        else:
-            stop_metric = cfg.LEARNING.stop_metric
-        if cfg.LEARNING.log_metrics == 'auto':
-            log_metrics = inferred_log_metrics
-        else:
-            log_metrics = cfg.LEARNING.log_metrics.split(',')
-        if stop_metric not in log_metrics:
-            log_metrics.append(stop_metric)
         net = BERTForTabularBasicV1(text_backbone=text_backbone,
                                     feature_field_info=preprocessor.feature_field_info(),
                                     label_shape=label_shape,
