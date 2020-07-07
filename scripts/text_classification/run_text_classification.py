@@ -99,7 +99,7 @@ def train(args):
     model.fit(train_data=train_data, label=label_columns)
     dev_metrics_scores = model.evaluate(dev_data, metrics=eval_metrics)
     with open(os.path.join(cfg.MISC.exp_dir, 'final_model_dev_score.json'), 'w') as of:
-        json.dump(of, dev_metrics_scores)
+        json.dump(dev_metrics_scores, of)
     test_prediction = model.predict(test_data)
     np.savetxt(os.path.join(cfg.MISC.exp_dir, 'test_predictions.txt'),
                test_prediction)
