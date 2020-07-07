@@ -9,7 +9,6 @@ def base_optimization_config():
     cfg = CfgNode()
     cfg.lr_scheduler = 'poly_scheduler'
     cfg.optimizer = 'adamw'
-    cfg.early_stopping = False  # Whether to use early stopping
     cfg.model_average = 10      # When this value is larger than 1, we will use
     cfg.optimizer_params = [('beta1', 0.9),
                             ('beta2', 0.999),
@@ -30,7 +29,6 @@ def base_optimization_config():
     cfg.valid_frequency = 0.2
     # Logging frequency = log frequency * num_updates_in_an_epoch
     cfg.log_frequency = 0.05
-    cfg.stop_metrics = 'auto'
     return cfg
 
 
@@ -47,7 +45,9 @@ def base_tabular_model_config():
 
 def base_learning_config():
     cfg = CfgNode()
+    cfg.early_stopping = False  # Whether to use early stopping
     cfg.valid_ratio = 0.1       # The ratio of to split the validation data
+    cfg.stop_metrics = 'auto'   # Automatically define the stopping metric
     return cfg
 
 
