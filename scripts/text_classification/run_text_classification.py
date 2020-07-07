@@ -57,7 +57,7 @@ def parse_args():
                         help='Whether to train the model')
     parser.add_argument('--do_eval', action='store_true',
                         help='Whether to evaluate the model')
-    parser.add_argument('--exp_dir', type=str, default='output',
+    parser.add_argument('--exp_dir', type=str, default=None,
                         help='The experiment directory where the model params will be written.')
     parser.add_argument('--ctx', type=str, default='gpu0',
                         help='list of gpus to run, e.g. 0 or 0,2,5. -1 means using cpu.')
@@ -77,6 +77,8 @@ def train(args):
     all_columns = feature_columns + [label_columns]
     if args.config_file is not None:
         cfg.merge_from_file(args.config_file)
+    if args.exp_dir is None:
+        args.exp_dir = '{}_{}'.format(args.task, cfg.MODEL.BACKBONE.name)
     cfg.defrost()
     cfg.LEARNING.stop_metric = stop_metric
     cfg.LEARNING.log_metrics = ','.join(eval_metrics)
