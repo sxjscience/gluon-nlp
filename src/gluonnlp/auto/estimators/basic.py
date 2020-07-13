@@ -3,8 +3,6 @@ import os
 import math
 import logging
 import time
-import csv
-import pandas as pd
 import mxnet as mx
 from mxnet.util import use_np
 from mxnet.lr_scheduler import PolyScheduler, CosineScheduler
@@ -19,7 +17,7 @@ from ..modules.classification import BERTForTabularBasicV1
 from ...utils.config import CfgNode
 from ...utils.misc import set_seed, logging_config, parse_ctx, grouper, count_parameters, repeat
 from ...utils.parameter import move_to_ctx, clip_grad_global_norm
-from .base import BaseTabularEstimator
+from .base import BaseEstimator
 from ..dataset import TabularDataset, random_split_train_val
 
 
@@ -309,7 +307,7 @@ def _classification_regression_predict(net, dataloader, problem_type, ctx_l,
 
 
 @use_np
-class BertForTabularPredictionBasic(BaseTabularEstimator):
+class BertForTabularPredictionBasic(BaseEstimator):
     def __init__(self, cfg=None):
         if cfg is None:
             cfg = BertForTabularPredictionBasic.get_cfg()
@@ -366,10 +364,10 @@ class BertForTabularPredictionBasic(BaseTabularEstimator):
         train_data
             The training data.
             Should be a format that can be converted to a tabular dataset
-        valid_data
-            The validation data.
         label
             The label column
+        valid_data
+            The validation data.
         """
         self._label = label
         cfg = self.cfg
@@ -592,15 +590,15 @@ class BertForTabularPredictionBasic(BaseTabularEstimator):
         if not isinstance(valid_data, TabularDataset):
             valid_data = TabularDataset(valid_data,
                                         column_properties=self._column_properties)
-        predictions = self.predict(valid_data, get_scores=True)
-        ground_truth = np.array(valid_data.table[self._label].apply(self._column_properties[self._label]
-                                                                    .transform))
+        predictions = self.predict(valid_data, get_original_labels=False)
+        ground_truth = np.array(valid_data.table[self._label].apply(
+            self._column_properties[self._label].transform))
         metric_scores = calculate_metric_scores(metrics=metrics,
                                                 predictions=predictions,
                                                 gt_labels=ground_truth)
         return metric_scores
 
-    def predict(self, test_data, get_raw_prediction=True, get_scores=False):
+    def _internal_predict(self, test_data, get_original_labels=True, get_probabilities=False):
         assert self.net is not None
         cfg = self.cfg
         if not isinstance(test_data, TabularDataset):
@@ -622,17 +620,44 @@ class BertForTabularPredictionBasic(BaseTabularEstimator):
                                                               ctx_l=ctx_l,
                                                               problem_type=self._problem_type,
                                                               has_label=False)
-        if get_scores:
-            return test_predictions
-        else:
-            if self.problem_type == _C.CLASSIFICATION:
+        if self.problem_type == _C.CLASSIFICATION:
+            if get_probabilities:
+                return test_predictions
+            else:
                 test_predictions = test_predictions.argmax(axis=-1)
-                if get_raw_prediction:
-                    out = np.array(map(self._column_properties[self._label].inv_transform,
-                                       test_predictions))
-                    return out
-                else:
-                    return test_predictions
+                if get_original_labels:
+                    test_predictions = np.array(
+                        map(self._column_properties[self._label].inv_transform,
+                            test_predictions))
+        return test_predictions
+
+    def predict_proba(self, test_data):
+        """
+
+        Parameters
+        ----------
+        test_data
+
+        Returns
+        -------
+        probabilities
+        """
+        assert self.problem_type == _C.CLASSIFICATION
+        return self._internal_predict(test_data, get_original_labels=False, get_probabilities=True)
+
+    def predict(self, test_data, get_original_labels=True):
+        """
+
+        Parameters
+        ----------
+        test_data
+        get_original_labels
+
+        Returns
+        -------
+        ret
+        """
+        return self._internal_predict(test_data, get_original_labels=True, get_probabilities=False)
 
     def save(self, file_path):
         raise NotImplementedError

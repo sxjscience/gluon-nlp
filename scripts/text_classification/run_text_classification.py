@@ -5,7 +5,7 @@ import json
 import argparse
 import numpy as np
 from gluonnlp.auto.dataset import load_pandas_df
-from gluonnlp.auto.estimators.tabular_basic import BertForTabularPredictionBasic
+from gluonnlp.auto.estimators.basic import BertForTabularPredictionBasic
 mx.npx.set_np()
 
 

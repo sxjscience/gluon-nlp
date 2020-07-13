@@ -1,7 +1,7 @@
 import abc
 
 
-class BaseTabularEstimator(abc.ABC):
+class BaseEstimator(abc.ABC):
     @property
     @abc.abstractmethod
     def cfg(self):
@@ -13,11 +13,15 @@ class BaseTabularEstimator(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def fit(self, train_data, label, valid_data=None):
+    def fit(self, train_data, **kwargs):
         pass
 
     @abc.abstractmethod
     def predict(self, test_data):
+        pass
+
+    @abc.abstractmethod
+    def predict_proba(self, test_data):
         pass
 
     @abc.abstractmethod

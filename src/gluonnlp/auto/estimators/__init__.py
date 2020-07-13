@@ -1,2 +1,2 @@
-from . import tabular_basic
+from . import basic
 from . import base
