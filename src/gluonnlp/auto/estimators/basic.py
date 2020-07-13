@@ -641,6 +641,7 @@ class BertForTabularPredictionBasic(BaseEstimator):
         Returns
         -------
         probabilities
+            The probabilities. Shape (#Samples, num_class)
         """
         assert self.problem_type == _C.CLASSIFICATION
         return self._internal_predict(test_data, get_original_labels=False, get_probabilities=True)
@@ -652,10 +653,12 @@ class BertForTabularPredictionBasic(BaseEstimator):
         ----------
         test_data
         get_original_labels
+            Whether to get the original labels
 
         Returns
         -------
-        ret
+        predictions
+            The predictions. Shape (#Samples,)
         """
         return self._internal_predict(test_data, get_original_labels=True, get_probabilities=False)
 
