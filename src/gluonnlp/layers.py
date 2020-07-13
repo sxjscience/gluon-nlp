@@ -201,6 +201,7 @@ def _gen_repr_with_kwargs(kwargs, cls_name):
     return s
 
 
+@use_np
 def get_activation(act: Optional[Union[str, HybridBlock]]) -> HybridBlock:
     """Get the activation based on the string
 
