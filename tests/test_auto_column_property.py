@@ -22,13 +22,11 @@ def test_text_column_property():
     assert text_column_property.min_length == 16
     assert text_column_property.max_length == 229
     assert text_column_property.name == 'sentence1'
-    assert text_column_property.lang == 'en'
     text_column_property2 = text_column_property.clone()
     text_column_property2.parse(test_snli_df['sentence2'])
     assert text_column_property2.min_length == 11
     assert text_column_property2.max_length == 116
     assert text_column_property2.name == 'sentence2'
-    assert text_column_property2.lang == 'en'
 
 
 def test_categorical_column_property():

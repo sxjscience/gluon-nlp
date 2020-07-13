@@ -7,14 +7,10 @@ from typing import List, Optional, Union, Tuple, Hashable
 from . import constants as _C
 from ..base import INT_TYPES, BOOL_TYPES
 from ..data.vocab import Vocab
-from ..data.filtering import LanguageIdentifier
 __all__ = ['CategoricalColumnProperty',
            'TextColumnProperty',
            'NumericalColumnProperty',
            'EntityColumnProperty']
-
-
-lang_id = LanguageIdentifier(algo='fasttext_compressed')
 
 
 class ColumnProperty(abc.ABC):
@@ -257,7 +253,7 @@ class NumericalColumnProperty(ColumnProperty):
 class TextColumnProperty(ColumnProperty):
     type = _C.TEXT
 
-    def __init__(self, lang=None):
+    def __init__(self):
         """
 
         Parameters
@@ -266,14 +262,9 @@ class TextColumnProperty(ColumnProperty):
             The language of the text column
         """
         super().__init__()
-        self._lang = lang
         self._min_length = None
         self._max_length = None
         self._avg_length = None
-
-    @property
-    def lang(self):
-        return self._lang
 
     @property
     def min_length(self):
@@ -293,24 +284,17 @@ class TextColumnProperty(ColumnProperty):
         self._min_length = lengths.min()
         self._avg_length = lengths.mean()
         self._max_length = lengths.max()
-        if self._lang is None:
-            # Determine the language
-            sel_data = column_data[:1000].tolist()
-            infer_lang_scores = map(lang_id, sel_data)
-            uniq_lang, counts = np.unique([dat[0] for dat in infer_lang_scores], return_counts=True)
-            self._lang = uniq_lang[counts.argmax()]
 
     def clone(self):
-        return TextColumnProperty(lang=self._lang)
+        return TextColumnProperty()
 
     def get_attributes(self):
-        return {'lang': self._lang}
+        return {}
 
     def info(self):
         return super().info([('length, min/avg/max',
                               '{:d}/{:.2f}/{:d}'.format(self.min_length,
-                                                        self.avg_length, self.max_length)),
-                             ('language', self.lang)])
+                                                        self.avg_length, self.max_length))])
 
 
 def _get_entity_label_type(label) -> str:
