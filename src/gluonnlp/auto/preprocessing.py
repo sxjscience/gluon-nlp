@@ -1,5 +1,6 @@
 import multiprocessing as mp
 import functools
+import os
 from collections import OrderedDict
 from typing import Dict, Optional, List, Tuple, Union
 import numpy as np
@@ -9,6 +10,7 @@ from .fields import TextTokenIdsField, EntityField, CategoricalField, NumericalF
 from ..utils.preprocessing import get_trimmed_lengths, match_tokens_with_char_spans
 from ..utils.misc import num_mp_workers
 from . import constants as _C
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 def infer_problem_type(label_column_property):
