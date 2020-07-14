@@ -636,8 +636,8 @@ class BertForTabularPredictionBasic(BaseEstimator):
                 test_predictions = test_predictions.argmax(axis=-1)
                 if get_original_labels:
                     test_predictions = np.array(
-                        map(self._column_properties[self._label].inv_transform,
-                            test_predictions))
+                        list(map(self._column_properties[self._label].inv_transform,
+                                 test_predictions)))
         return test_predictions
 
     def predict_proba(self, test_data):
