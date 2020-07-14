@@ -101,9 +101,10 @@ def train(args):
     with open(os.path.join(cfg.MISC.exp_dir, 'final_model_dev_score.json'), 'w') as of:
         json.dump(dev_metrics_scores, of)
     test_prediction = model.predict(test_data)
-    test_prediction = pd.Series(test_prediction, index=label_columns)
-    test_prediction.to_csv(os.path.join(cfg.MISC.exp_dir, 'test_predictions.csv'))
-    model.save(os.path.join(args.exp_dir, 'saved_model'))
+    with open(os.path.join(cfg.MISC.exp_dir, 'test_predictions.txt'), 'w') as of:
+        for ele in test_prediction:
+            of.write(str(ele) + '\n')
+    model.save(os.path.join(cfg.MISC.exp_dir, 'saved_model'))
 
 
 def predict(args):
