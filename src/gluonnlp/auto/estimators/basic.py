@@ -127,7 +127,7 @@ def base_optimization_config():
     # The validation frequency = validation frequency * num_updates_in_an_epoch
     cfg.valid_frequency = 0.5
     # Logging frequency = log frequency * num_updates_in_an_epoch
-    cfg.log_frequency = 0.5
+    cfg.log_frequency = 0.1
     return cfg
 
 
@@ -145,7 +145,6 @@ def base_tabular_model_config():
 def base_learning_config():
     cfg = CfgNode()
     cfg.early_stopping_patience = 6  # Stop if we cannot find better checkpoints
-    cfg.save_strategy = 'best'  # Can be 'best', or 'swa'
     cfg.valid_ratio = 0.15      # The ratio of dataset to split for validation
     cfg.stop_metric = 'auto'    # Automatically define the stopping metric
     cfg.log_metrics = 'auto'    # Automatically determine the metrics used in logging
@@ -494,7 +493,6 @@ class BertForTabularPredictionBasic(BaseEstimator):
         dev_metrics_csv_logger.write(','.join(['update_idx', 'epoch']
                                               + log_metrics + ['find_better', 'time_spent']) + '\n')
         mx.npx.waitall()
-        save_strategy = cfg.LEARNING.save_strategy.split(',')
         no_better_rounds = 0
         for update_idx in range(max_update):
             num_samples_per_update_l = [0 for _ in ctx_l]
