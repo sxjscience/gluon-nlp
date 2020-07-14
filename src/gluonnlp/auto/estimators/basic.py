@@ -569,6 +569,7 @@ class BertForTabularPredictionBasic(BaseEstimator):
                                                               metric_scores[stop_metric]):
                     find_better = True
                     no_better_rounds = 0
+                    best_dev_metric = metric_scores[stop_metric]
                 else:
                     find_better = False
                     no_better_rounds += 1
@@ -666,7 +667,8 @@ class BertForTabularPredictionBasic(BaseEstimator):
         predictions
             The predictions. Shape (#Samples,)
         """
-        return self._internal_predict(test_data, get_original_labels=True, get_probabilities=False)
+        return self._internal_predict(test_data, get_original_labels=get_original_labels,
+                                      get_probabilities=False)
 
     def save(self, dir_path):
         """Save the trained model to a directory
