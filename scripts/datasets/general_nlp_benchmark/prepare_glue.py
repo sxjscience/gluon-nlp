@@ -676,6 +676,9 @@ def main(args):
             reader = TASK2READER[task]
             download(url, data_file, sha1_hash=_URL_FILE_STATS[url])
             base_dir = os.path.join(args.data_dir, task)
+            if os.path.exists(base_dir):
+                print('Found!')
+                continue
             zip_dir_name = None
             with zipfile.ZipFile(data_file) as zipdata:
                 if zip_dir_name is None:

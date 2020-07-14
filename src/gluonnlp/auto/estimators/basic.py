@@ -667,7 +667,8 @@ class BertForTabularPredictionBasic(BaseEstimator):
         predictions
             The predictions. Shape (#Samples,)
         """
-        return self._internal_predict(test_data, get_original_labels=get_original_labels,
+        return self._internal_predict(test_data,
+                                      get_original_labels=get_original_labels,
                                       get_probabilities=False)
 
     def save(self, dir_path):
