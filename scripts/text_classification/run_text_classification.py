@@ -100,7 +100,11 @@ def train(args):
     dev_metrics_scores = model.evaluate(dev_data, metrics=eval_metrics)
     with open(os.path.join(cfg.MISC.exp_dir, 'final_model_dev_score.json'), 'w') as of:
         json.dump(dev_metrics_scores, of)
+    dev_prediction = model.predict(dev_data)
     test_prediction = model.predict(test_data)
+    with open(os.path.join(cfg.MISC.exp_dir, 'dev_predictions.txt'), 'w') as of:
+        for ele in dev_prediction:
+            of.write(str(ele) + '\n')
     with open(os.path.join(cfg.MISC.exp_dir, 'test_predictions.txt'), 'w') as of:
         for ele in test_prediction:
             of.write(str(ele) + '\n')

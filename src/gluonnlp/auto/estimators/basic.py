@@ -561,10 +561,6 @@ class BertForTabularPredictionBasic(BaseEstimator):
                                                         predictions=dev_predictions,
                                                         gt_labels=gt_dev_labels)
                 valid_time_spent = time.time() - valid_start_tick
-                np.save(os.path.join(
-                    exp_dir,
-                    'iter{:07d}_prediction.npy'.format(update_idx + 1)),
-                    dev_predictions)
                 if best_dev_metric is None or is_better_score(stop_metric,
                                                               best_dev_metric,
                                                               metric_scores[stop_metric]):
