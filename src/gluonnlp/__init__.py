@@ -9,6 +9,6 @@ from . import layers
 from . import loss
 from . import lr_scheduler
 from . import op
-from . import optimizer
+from . import optimizers
 from . import registry
 from . import sequence_sampler

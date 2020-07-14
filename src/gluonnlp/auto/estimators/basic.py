@@ -108,7 +108,7 @@ def base_optimization_config():
     cfg = CfgNode()
     cfg.lr_scheduler = 'poly_scheduler'
     cfg.optimizer = 'adamw'
-    cfg.model_average = 10      # When this value is larger than 1, we will use
+    cfg.model_average = 10
     cfg.optimizer_params = [('beta1', 0.9),
                             ('beta2', 0.999),
                             ('epsilon', 1e-6),
@@ -454,6 +454,7 @@ class BertForTabularPredictionBasic(BaseEstimator):
                                     feature_field_info=preprocessor.feature_field_info(),
                                     label_shape=label_shape,
                                     cfg=cfg.MODEL.NETWORK)
+        self._net = net
         net.initialize_with_pretrained_backbone(backbone_params_path, ctx=ctx_l)
         net.hybridize()
         num_total_params, num_total_fixed_params = count_parameters(net.collect_params())
@@ -585,7 +586,6 @@ class BertForTabularPredictionBasic(BaseEstimator):
                     break
         # TODO(sxjscience) Add SWA
         net.load_parameters(filename=os.path.join(exp_dir, 'best_model.params'))
-        self._net = net
 
     def evaluate(self, valid_data, metrics):
         assert self.net is not None
@@ -674,6 +674,7 @@ class BertForTabularPredictionBasic(BaseEstimator):
         Parameters
         ----------
         dir_path
+            The destination directory
         """
         os.makedirs(dir_path, exist_ok=True)
         self.net.save_parameters(os.path.join(dir_path, 'net.params'))
