@@ -385,13 +385,6 @@ class TabularDataset:
     def column_properties(self):
         return self._column_properties
 
-    def column_metadata(self):
-        metadata = dict()
-        for col_name, col_prop in self.column_properties.items():
-            metadata[col_name] = {'type': col_prop.type,
-                                  'attrs': col_prop.get_attributes()}
-        return metadata
-
     def infer_problem_type(self, label_col_name):
         """
 

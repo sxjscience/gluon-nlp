@@ -592,3 +592,11 @@ class EntityColumnProperty(ColumnProperty):
         elif self.label_type == _C.NUMERICAL:
             additional_attributes.append(('label_shape', self.label_shape))
         return super().info(additional_attributes)
+
+
+def get_column_property_metadata(column_properties):
+    metadata = dict()
+    for col_name, col_prop in column_properties.items():
+        metadata[col_name] = {'type': col_prop.type,
+                              'attrs': col_prop.get_attributes()}
+    return metadata

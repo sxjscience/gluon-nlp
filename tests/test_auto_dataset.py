@@ -4,6 +4,7 @@ import pytest
 import json
 from gluonnlp.auto import constants as _C
 from gluonnlp.auto.dataset import TabularDataset
+from gluonnlp.auto.column_property import get_column_property_metadata
 from gluonnlp.utils.testing import autonlp_snli_testdata
 from gluonnlp.cli.data.general_nlp_benchmark import prepare_glue
 
@@ -24,15 +25,19 @@ def test_tabular_nlp_snli_dataset():
                                   column_properties=dataset.column_properties)
     assert new_dataset1.columns == dataset.columns
     assert new_dataset2.columns == dataset.columns
-    assert new_dataset1.column_metadata() == dataset.column_metadata()
-    assert new_dataset2.column_metadata() == dataset.column_metadata()
+    assert get_column_property_metadata(new_dataset1.column_properties) ==\
+           get_column_property_metadata(dataset.column_properties)
+    assert get_column_property_metadata(new_dataset2.column_properties) ==\
+           get_column_property_metadata(dataset.column_properties)
     with tempfile.TemporaryDirectory() as root:
         with open(os.path.join(root, 'metadata.json'), 'w', encoding='utf-8') as of:
-            json.dump(new_dataset1.column_metadata(), of, ensure_ascii=False)
+            json.dump(get_column_property_metadata(new_dataset1.column_properties), of,
+                      ensure_ascii=False)
         new_dataset3 = TabularDataset(snli_sample_df.iloc[:10],
                                       column_metadata=os.path.join(root, 'metadata.json'))
         assert new_dataset3.columns == dataset.columns
-        assert new_dataset3.column_metadata() == dataset.column_metadata()
+        assert get_column_property_metadata(new_dataset3.column_properties) == \
+               get_column_property_metadata(dataset.column_properties)
 
 
 GLUE_TASKS_FOR_TEST = \

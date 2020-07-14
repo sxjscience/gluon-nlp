@@ -12,6 +12,7 @@ from sklearn.metrics import accuracy_score, f1_score, matthews_corrcoef, roc_auc
 from scipy.stats import pearsonr, spearmanr
 from .. import constants as _C
 from ...models import get_backbone
+from ..column_property import get_column_property_metadata
 from ..preprocessing import TabularBasicBERTPreprocessor
 from ...lr_scheduler import InverseSquareRootScheduler
 from ..modules.classification import BERTForTabularBasicV1
@@ -685,7 +686,8 @@ class BertForTabularPredictionBasic(BaseEstimator):
         with open(os.path.join(dir_path, 'cfg.yml'), 'w') as of:
             of.write(self.cfg.dump())
         with open(os.path.join(dir_path, 'column_metadata.json'), 'w') as of:
-            json.dump(self._column_properties, of, ensure_ascii=True)
+            json.dump(get_column_property_metadata(self._column_properties),
+                      of, ensure_ascii=True)
 
     @classmethod
     def load(cls, dir_path):
