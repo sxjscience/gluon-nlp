@@ -1,12 +1,15 @@
 import itertools
 import numpy as np
+import pytest
 from gluonnlp.optimizer import AdamW
+from packaging import version
 import mxnet as mx
 from mxnet.test_utils import compare_optimizer
 mx.npx.reset_np()
 
 
-def test_adam():
+@pytest.mark.skipif(version.parse(mx.__version__) < version.parse('2.0.0'))
+def test_adamw():
     opt1 = AdamW
     opt2 = AdamW
     shapes = [(3, 4, 5), (10, 4), (7,)]
