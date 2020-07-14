@@ -31,6 +31,7 @@ requirements = [
     'sacremoses>=0.0.38',
     'yacs>=0.1.6',
     'sacrebleu',
+    'pyarrow',
     'regex',
     'tokenizers>=0.7.0',
     'sentencepiece'
