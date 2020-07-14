@@ -597,9 +597,12 @@ class BertForTabularPredictionBasic(BaseEstimator):
         if not isinstance(valid_data, TabularDataset):
             valid_data = TabularDataset(valid_data,
                                         column_properties=self._column_properties)
-        predictions = self.predict(valid_data, get_original_labels=False)
         ground_truth = np.array(valid_data.table[self._label].apply(
             self._column_properties[self._label].transform))
+        if self.problem_type == _C.CLASSIFICATION:
+            predictions = self.predict_proba(valid_data)
+        else:
+            predictions = self.predict(valid_data)
         metric_scores = calculate_metric_scores(metrics=metrics,
                                                 predictions=predictions,
                                                 gt_labels=ground_truth)
@@ -615,8 +618,7 @@ class BertForTabularPredictionBasic(BaseEstimator):
             = get_backbone(cfg.MODEL.BACKBONE.name)
         processed_test = self._preprocessor.process_test(test_data.table)
         ctx_l = parse_ctx(cfg.MISC.context)
-        batch_size = cfg.OPTIMIZATION.batch_size \
-                     // len(ctx_l) // cfg.OPTIMIZATION.num_accumulated
+        batch_size = cfg.OPTIMIZATION.batch_size // len(ctx_l) // cfg.OPTIMIZATION.num_accumulated
         inference_batch_size = batch_size * cfg.OPTIMIZATION.val_batch_size_mult
         test_dataloader = DataLoader(processed_test,
                                      batch_size=inference_batch_size,
