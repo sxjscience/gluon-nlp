@@ -374,7 +374,7 @@ class BertForTabularPredictionBasic(BaseEstimator):
         cfg = self.cfg
         set_seed(cfg.MISC.seed)
         exp_dir = cfg.MISC.exp_dir
-        logging_config(folder=exp_dir, name='train.log')
+        logging_config(folder=exp_dir, name='train')
         ctx_l = parse_ctx(cfg.MISC.context)
         if not isinstance(train_data, TabularDataset):
             train_data = TabularDataset(train_data, label_columns=label)
