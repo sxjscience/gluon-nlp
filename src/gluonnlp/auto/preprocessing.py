@@ -3,7 +3,7 @@ import functools
 from collections import OrderedDict
 from typing import Dict, Optional, List, Tuple, Union
 import numpy as np
-import mxnet.gluon.data.batchify as bf
+from ..data import batchify as bf
 from .dataset import TabularDataset
 from .fields import TextTokenIdsField, EntityField, CategoricalField, NumericalField
 from ..utils.preprocessing import get_trimmed_lengths, match_tokens_with_char_spans
@@ -421,7 +421,7 @@ class TabularBasicBERTPreprocessor:
             else:
                 raise NotImplementedError
         if is_test:
-            return bf.Group(feature_batchify_fn_l)
+            return bf.Tuple(feature_batchify_fn_l)
         else:
             label_batchify_fn_l = []
             for type_code, attrs in self.label_field_info():
@@ -431,8 +431,8 @@ class TabularBasicBERTPreprocessor:
                     label_batchify_fn_l.append(NumericalField.batchify())
                 else:
                     raise NotImplementedError
-            return bf.Group(bf.Group(feature_batchify_fn_l),
-                            bf.Group(label_batchify_fn_l))
+            return bf.Tuple(bf.Tuple(feature_batchify_fn_l),
+                            bf.Tuple(label_batchify_fn_l))
 
     def process_train(self, df_or_dataset):
         if isinstance(df_or_dataset, TabularDataset):
