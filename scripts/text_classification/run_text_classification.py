@@ -103,6 +103,7 @@ def train(args):
     test_prediction = model.predict(test_data)
     test_prediction = pd.Series(test_prediction, index=label_columns)
     test_prediction.to_csv(os.path.join(cfg.MISC.exp_dir, 'test_predictions.csv'))
+    model.save(os.path.join(args.exp_dir, 'saved_model'))
 
 
 def predict(args):
