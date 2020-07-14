@@ -3,7 +3,6 @@ import os
 import pandas as pd
 import json
 import argparse
-import numpy as np
 from gluonnlp.auto.dataset import load_pandas_df
 from gluonnlp.auto.estimators.basic import BertForTabularPredictionBasic
 mx.npx.set_np()
