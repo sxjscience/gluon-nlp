@@ -418,9 +418,9 @@ class BertForTabularPredictionBasic(BaseEstimator):
         backbone_model_cls, backbone_cfg, tokenizer, backbone_params_path, _ \
             = get_backbone(cfg.MODEL.BACKBONE.name)
         with open(os.path.join(exp_dir, 'cfg.yml'), 'w') as f:
-            f.write(cfg.dump())
+            f.write(str(cfg))
         with open(os.path.join(exp_dir, 'backbone_cfg.yml'), 'w') as f:
-            f.write(backbone_cfg.dump())
+            f.write(str(backbone_cfg))
         text_backbone = backbone_model_cls.from_cfg(backbone_cfg)
         # Build Preprocessor + Preprocess the training dataset + Inference problem type
         preprocessor = TabularBasicBERTPreprocessor(tokenizer=tokenizer,
