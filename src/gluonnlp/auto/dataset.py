@@ -392,10 +392,6 @@ class TabularDataset:
                                   'attrs': col_prop.get_attributes()}
         return metadata
 
-    def save_column_metadata(self, save_path):
-        with open(save_path, 'w', encoding='utf-8') as of:
-            json.dump(self.column_metadata(), of, ensure_ascii=False)
-
     def infer_problem_type(self, label_col_name):
         """
 

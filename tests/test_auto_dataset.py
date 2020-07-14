@@ -1,7 +1,7 @@
 import os
 import tempfile
 import pytest
-import multiprocessing as mp
+import json
 from gluonnlp.auto import constants as _C
 from gluonnlp.auto.dataset import TabularDataset
 from gluonnlp.utils.testing import autonlp_snli_testdata
@@ -27,7 +27,8 @@ def test_tabular_nlp_snli_dataset():
     assert new_dataset1.column_metadata() == dataset.column_metadata()
     assert new_dataset2.column_metadata() == dataset.column_metadata()
     with tempfile.TemporaryDirectory() as root:
-        new_dataset1.save_column_metadata(os.path.join(root, 'metadata.json'))
+        with open(os.path.join(root, 'metadata.json'), 'w', encoding='utf-8') as of:
+            json.dump(new_dataset1.column_metadata(), of, ensure_ascii=False)
         new_dataset3 = TabularDataset(snli_sample_df.iloc[:10],
                                       column_metadata=os.path.join(root, 'metadata.json'))
         assert new_dataset3.columns == dataset.columns

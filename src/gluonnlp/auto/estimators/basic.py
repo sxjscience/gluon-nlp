@@ -117,7 +117,7 @@ def base_optimization_config():
     cfg.val_batch_size_mult = 2  # By default, we double the batch size for validation
     cfg.lr = 1E-4
     cfg.final_lr = 0.0
-    cfg.num_train_epochs = 3.0
+    cfg.num_train_epochs = 10.0
     cfg.warmup_portion = 0.1
     cfg.layerwise_lr_decay = 0.8  # The layer_wise decay
     cfg.wd = 0.01  # Weight Decay
@@ -142,10 +142,10 @@ def base_tabular_model_config():
 
 def base_learning_config():
     cfg = CfgNode()
-    cfg.early_stopping = False  # Whether to use early stopping
+    cfg.early_stopping_patience = 6  # Stop if we cannot find better checkpoints
     cfg.save_strategy = 'best'  # Can be 'best', or 'swa'
     cfg.valid_ratio = 0.15      # The ratio of dataset to split for validation
-    cfg.stop_metric = 'auto'   # Automatically define the stopping metric
+    cfg.stop_metric = 'auto'    # Automatically define the stopping metric
     cfg.log_metrics = 'auto'    # Automatically determine the metrics used in logging
     return cfg
 
@@ -662,9 +662,27 @@ class BertForTabularPredictionBasic(BaseEstimator):
         """
         return self._internal_predict(test_data, get_original_labels=True, get_probabilities=False)
 
-    def save(self, file_path):
-        raise NotImplementedError
+    def save(self, dir_path):
+        """Save the trained model to a directory
+
+        Parameters
+        ----------
+        dir_path
+        """
+        self.net.save_parameters(os.path.join(dir_path, 'net.params'))
+        with open(os.path.join(dir_path, 'cfg.yml'), 'w') as of:
+            of.write(self.cfg.dump())
 
     @classmethod
-    def load(cls, file_path):
+    def load(cls, dir_path):
+        """Load the trained model from a directory
+
+        Parameters
+        ----------
+        dir_path
+
+        Returns
+        -------
+
+        """
         raise NotImplementedError
