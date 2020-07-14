@@ -3,6 +3,7 @@ import os
 import math
 import logging
 import time
+import json
 import mxnet as mx
 from mxnet.util import use_np
 from mxnet.lr_scheduler import PolyScheduler, CosineScheduler
@@ -672,6 +673,8 @@ class BertForTabularPredictionBasic(BaseEstimator):
         self.net.save_parameters(os.path.join(dir_path, 'net.params'))
         with open(os.path.join(dir_path, 'cfg.yml'), 'w') as of:
             of.write(self.cfg.dump())
+        with open(os.path.join(dir_path, 'column_metadata.json'), 'w') as of:
+            json.dump(self._column_properties, of, ensure_ascii=True)
 
     @classmethod
     def load(cls, dir_path):
