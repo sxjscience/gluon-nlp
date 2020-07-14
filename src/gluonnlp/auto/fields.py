@@ -1,5 +1,5 @@
 from . import constants as _C
-from mxnet.gluon.data import batchify as bf
+from ..data import batchify as bf
 
 
 class _TextTokenIdsFieldBatchify:
