@@ -12,24 +12,7 @@ nlp_data prepare_glue --benchmark glue
 nlp_data prepare_glue --benchmark superglue
 ```
 
-- Run training script
-
-```bash
-TASK=mnli
-TRAIN_FILE=glue/${TASK}/train.pd.pkl
-DEV_FILE=glue/${TASK}/dev_matched.pd.pkl
-TEST_FILE=glue/${TASK}/test_matched.pd.pkl
-python run_text_classification.py \
-     --do_train \
-     --train_file ${TRAIN_FILE} \
-     --dev_file ${DEV_FILE} \
-     --test_file ${TEST_FILE} \
-     --task ${TASK} \
-     --batch_size 32 \
-     --num_accumulated 1 \
-     --ctx gpu0
-```
-
+- Run GLUE Benchmark
 
 ```bash
 for TASK in cola sst mrpc sts qqp qnli rte wnli
@@ -47,6 +30,26 @@ do
      --num_accumulated 1 \
      --ctx gpu0
 done
+
+python run_text_classification.py \
+     --do_train \
+     --train_file glue/mnli/train.pd.pkl \
+     --dev_file glue/mnli/dev_matched.pd.pkl \
+     --test_file glue/mnli/test_matched.pd.pkl \
+     --task mnli \
+     --batch_size 32 \
+     --num_accumulated 1 \
+     --ctx gpu0
+
+python run_text_classification.py \
+     --do_train \
+     --train_file glue/mnli/train.pd.pkl \
+     --dev_file glue/mnli/dev_mismatched.pd.pkl \
+     --test_file glue/mnli/test_mismatched.pd.pkl \
+     --task mnli \
+     --batch_size 32 \
+     --num_accumulated 1 \
+     --ctx gpu0
 ```
 
 ## Kaggle Competitions
