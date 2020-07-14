@@ -1,3 +1,4 @@
+nlp_data prepare_glue --benchmark glue
 CTX=gpu0
 
 for TASK in cola sst mrpc sts qqp qnli rte wnli

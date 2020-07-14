@@ -677,6 +677,7 @@ class BertForTabularPredictionBasic(BaseEstimator):
         ----------
         dir_path
         """
+        os.makedirs(dir_path, exist_ok=True)
         self.net.save_parameters(os.path.join(dir_path, 'net.params'))
         with open(os.path.join(dir_path, 'cfg.yml'), 'w') as of:
             of.write(self.cfg.dump())
