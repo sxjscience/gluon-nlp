@@ -494,7 +494,7 @@ class BertForTabularPredictionBasic(BaseEstimator):
                                               + log_metrics + ['find_better', 'time_spent']) + '\n')
         mx.npx.waitall()
         save_strategy = cfg.LEARNING.save_strategy.split(',')
-
+        no_better_rounds = 0
         for update_idx in range(max_update):
             num_samples_per_update_l = [0 for _ in ctx_l]
             for accum_idx in range(cfg.OPTIMIZATION.num_accumulated):
@@ -568,9 +568,11 @@ class BertForTabularPredictionBasic(BaseEstimator):
                                                               best_dev_metric,
                                                               metric_scores[stop_metric]):
                     find_better = True
+                    no_better_rounds = 0
                 else:
                     find_better = False
-                if find_better and 'best' in save_strategy:
+                    no_better_rounds += 1
+                if find_better:
                     net.save_parameters(os.path.join(exp_dir, 'best_model.params'))
                 loss_string = ', '.join(['{}={}'.format(key, metric_scores[key])
                                          for key in log_metrics])
@@ -582,6 +584,9 @@ class BertForTabularPredictionBasic(BaseEstimator):
                               int(update_idx / updates_per_epoch)]
                         + [metric_scores[key] for key in log_metrics]
                         + [find_better, valid_time_spent])) + '\n')
+                if no_better_rounds >= cfg.LEARNING.early_stopping_patience:
+                    logging.info('Early stopping patience reached!')
+                    break
         # TODO(sxjscience) Add SWA
         net.load_parameters(filename=os.path.join(exp_dir, 'best_model.params'))
         self._net = net
