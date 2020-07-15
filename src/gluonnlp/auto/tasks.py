@@ -76,7 +76,7 @@ class AutoNLP:
         if stop_metric is not None:
             cfg.LEARNING.stop_metric = stop_metric
         if backbone_name is not None:
-            cfg.BACKBONE.name = backbone_name
+            cfg.MODEL.BACKBONE.name = backbone_name
         cfg.freeze()
         estimator = BertForTabularPredictionBasic(cfg)
         estimator.fit(train_data=train_data, valid_data=valid_data,
