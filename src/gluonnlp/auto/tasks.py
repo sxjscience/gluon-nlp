@@ -4,12 +4,16 @@ from .estimators.basic import BertForTabularPredictionBasic
 
 class AutoNLP:
     @staticmethod
-    def fit(train_data, valid_data=None, feature_columns=None,
-            label=None, valid_ratio=0.15, exp_dir='./autonlp',
+    def fit(train_data,
+            valid_data=None, feature_columns=None,
+            label=None, valid_ratio=0.15,
+            exp_dir='./autonlp',
             stop_metric=None,
             eval_metrics=None,
             log_metrics=None,
-            backbone_name=None):
+            time_limits=3,
+            hyperparameters=None,
+            network_configs='google_electra_base'):
         """
 
         Parameters
@@ -23,13 +27,14 @@ class AutoNLP:
         exp_dir
             The experiment directory
         stop_metric
-            Stop metrics for model selection
+            Stop metric for model selection
         eval_metrics
             How you may potentially evaluate the model
         log_metrics
             The logging metrics
-        backbone_name
-            Name of the backbone
+        timelimits
+
+        network_configs
 
         Returns
         -------
@@ -83,3 +88,17 @@ class AutoNLP:
                       feature_columns=feature_columns,
                       label=label)
         return estimator
+
+    @staticmethod
+    def load(dir_path):
+        """
+
+        Parameters
+        ----------
+        dir_path
+
+        Returns
+        -------
+
+        """
+        BertForTabularPredictionBasic.load(dir_path)
