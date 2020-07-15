@@ -5,7 +5,11 @@ from .estimators.basic import BertForTabularPredictionBasic
 class AutoNLP:
     @staticmethod
     def fit(train_data, valid_data=None, feature_columns=None,
-            label=None, valid_ratio=0.15, exp_dir='./autonlp', eval_metrics=None):
+            label=None, valid_ratio=0.15, exp_dir='./autonlp',
+            stop_metric=None,
+            eval_metrics=None,
+            log_metrics=None,
+            backbone_name=None):
         """
 
         Parameters
@@ -18,8 +22,14 @@ class AutoNLP:
             Valid ratio
         exp_dir
             The experiment directory
+        stop_metric
+            Stop metrics for model selection
         eval_metrics
             How you may potentially evaluate the model
+        log_metrics
+            The logging metrics
+        backbone_name
+            Name of the backbone
 
         Returns
         -------
@@ -61,6 +71,12 @@ class AutoNLP:
         cfg.defrost()
         if exp_dir is not None:
             cfg.MISC.exp_dir = exp_dir
+        if log_metrics is not None:
+            cfg.LEARNING.log_metrics = log_metrics
+        if stop_metric is not None:
+            cfg.LEARNING.stop_metric = stop_metric
+        if backbone_name is not None:
+            cfg.BACKBONE.name = backbone_name
         cfg.freeze()
         estimator = BertForTabularPredictionBasic(cfg)
         estimator.fit(train_data=train_data, valid_data=valid_data,

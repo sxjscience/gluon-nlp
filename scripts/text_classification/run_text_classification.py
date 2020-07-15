@@ -2,8 +2,7 @@ import mxnet as mx
 import os
 import json
 import argparse
-from gluonnlp.auto.dataset import load_pandas_df
-from gluonnlp.auto.estimators.basic import BertForTabularPredictionBasic
+from gluonnlp.auto.tasks import AutoNLP
 mx.npx.set_np()
 
 
@@ -66,48 +65,33 @@ def parse_args():
 
 
 def train(args):
-    cfg = BertForTabularPredictionBasic.get_cfg()
     if args.task is not None:
         feature_columns, label_columns, stop_metric, eval_metrics = TASKS[args.task]
     else:
         raise NotImplementedError
-    if isinstance(feature_columns, str):
-        feature_columns = [feature_columns]
-    all_columns = feature_columns + [label_columns]
-    if args.config_file is not None:
-        cfg.merge_from_file(args.config_file)
     if args.exp_dir is None:
-        args.exp_dir = '{}_{}'.format(args.task, cfg.MODEL.BACKBONE.name)
-    cfg.defrost()
-    cfg.LEARNING.stop_metric = stop_metric
-    cfg.LEARNING.log_metrics = ','.join(eval_metrics)
-    if args.batch_size is not None:
-        cfg.OPTIMIZATION.batch_size = args.batch_size
-    if args.exp_dir is not None:
-        cfg.MISC.exp_dir = args.exp_dir
-    if args.ctx is not None:
-        cfg.MISC.context = args.ctx
-    cfg.freeze()
-    train_data = load_pandas_df(args.train_file)
-    dev_data = load_pandas_df(args.dev_file)
-    test_data = load_pandas_df(args.test_file)
-    train_data = train_data[all_columns]
-    dev_data = dev_data[all_columns]
-    test_data = test_data[feature_columns]
-    model = BertForTabularPredictionBasic(cfg)
-    model.fit(train_data=train_data, label=label_columns)
-    dev_metrics_scores = model.evaluate(dev_data, metrics=eval_metrics)
-    with open(os.path.join(cfg.MISC.exp_dir, 'final_model_dev_score.json'), 'w') as of:
+        args.exp_dir = '{}_{}'.format(args.task, args.backbone_name)
+    if args.backbone_name is None:
+        args.backbone_name = 'google_electra_base'
+    model = AutoNLP.fit(train_data=args.train_file,
+                        feature_columns=feature_columns,
+                        label=label_columns,
+                        exp_dir=args.exp_dir,
+                        stop_metric=stop_metric,
+                        eval_metrics=eval_metrics,
+                        backbone_name=args.backbone_name)
+    dev_metrics_scores = model.evaluate(args.dev_file, metrics=eval_metrics)
+    with open(os.path.join(args.exp_dir, 'final_model_dev_score.json'), 'w') as of:
         json.dump(dev_metrics_scores, of)
-    dev_prediction = model.predict(dev_data)
-    test_prediction = model.predict(test_data)
-    with open(os.path.join(cfg.MISC.exp_dir, 'dev_predictions.txt'), 'w') as of:
+    dev_prediction = model.predict(args.dev_file)
+    test_prediction = model.predict(args.test_file)
+    with open(os.path.join(args.exp_dir, 'dev_predictions.txt'), 'w') as of:
         for ele in dev_prediction:
             of.write(str(ele) + '\n')
-    with open(os.path.join(cfg.MISC.exp_dir, 'test_predictions.txt'), 'w') as of:
+    with open(os.path.join(args.exp_dir, 'test_predictions.txt'), 'w') as of:
         for ele in test_prediction:
             of.write(str(ele) + '\n')
-    model.save(os.path.join(cfg.MISC.exp_dir, 'saved_model'))
+    model.save(os.path.join(args.exp_dir, 'saved_model'))
 
 
 def predict(args):
