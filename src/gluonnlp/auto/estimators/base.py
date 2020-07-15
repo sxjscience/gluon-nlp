@@ -3,10 +3,11 @@ import abc
 
 class BaseEstimator(abc.ABC):
     def __init__(self, config=None, logger=None, reporter=None):
+        super().__init__()
         if config is None:
-            self._config = self.get_cfg()
+            self._config = self.__class__.get_cfg()
         else:
-            base_config = self.get_cfg()
+            base_config = self.__class__.get_cfg()
             self._config = base_config.clone_merge(config)
         self._logger = logger
         self._reporter = reporter
