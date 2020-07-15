@@ -13,8 +13,6 @@ do
      --dev_file ${DEV_FILE} \
      --test_file ${TEST_FILE} \
      --task ${TASK} \
-     --batch_size 32 \
-     --num_accumulated 1 \
      --ctx ${CTX}
 done
 
@@ -24,8 +22,6 @@ python run_text_classification.py \
      --dev_file glue/mnli/dev_matched.pd.pkl \
      --test_file glue/mnli/test_matched.pd.pkl \
      --task mnli \
-     --batch_size 32 \
-     --num_accumulated 1 \
      --ctx ${CTX}
 
 python run_text_classification.py \
@@ -34,6 +30,4 @@ python run_text_classification.py \
      --dev_file glue/mnli/dev_mismatched.pd.pkl \
      --test_file glue/mnli/test_mismatched.pd.pkl \
      --task mnli \
-     --batch_size 32 \
-     --num_accumulated 1 \
      --ctx ${CTX}
