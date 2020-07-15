@@ -2,10 +2,17 @@ import abc
 
 
 class BaseEstimator(abc.ABC):
+    def __init__(self, config=None, logger=None, reporter=None):
+        if config is None:
+            self._config = self.get_cfg()
+        else:
+            self._config = self.get_cfg().merge_clone(config)
+        self._logger = logger
+        self._reporter = reporter
+
     @property
-    @abc.abstractmethod
-    def cfg(self):
-        pass
+    def config(self):
+        return self._config
 
     @staticmethod
     @abc.abstractmethod
@@ -18,10 +25,6 @@ class BaseEstimator(abc.ABC):
 
     @abc.abstractmethod
     def predict(self, test_data):
-        pass
-
-    @abc.abstractmethod
-    def predict_proba(self, test_data):
         pass
 
     @abc.abstractmethod

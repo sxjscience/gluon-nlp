@@ -1,6 +1,6 @@
 # Text Classification with Pretrained Models
 
-## Solve GLUE and SuperGLUE with AutoML + NLP
+## Solve GLUE Tasks with AutoML + NLP
 We describe how to finetune a pretrained model for text classification. Here, we use the 
 GLUE/SuperGLUE as the example.
 
@@ -15,32 +15,12 @@ nlp_data prepare_glue --benchmark superglue
 - Run GLUE Benchmark
 
 ```bash
-for TASK in cola sst mrpc sts qqp qnli rte wnli
-do
-    TRAIN_FILE=glue/${TASK}/train.pd.pkl
-    DEV_FILE=glue/${TASK}/dev.pd.pkl
-    TEST_FILE=glue/${TASK}/test.pd.pkl
-    python run_text_classification.py \
-     --do_train \
-     --train_file ${TRAIN_FILE} \
-     --dev_file ${DEV_FILE} \
-     --test_file ${TEST_FILE} \
-     --task ${TASK} \
-     --batch_size 32 \
-     --num_accumulated 1 \
-     --ctx gpu0
-done
+bash run_glue.sh
+```
 
-python run_text_classification.py \
-     --do_train \
-     --train_file glue/mnli/train.pd.pkl \
-     --dev_file glue/mnli/dev_matched.pd.pkl \
-     --test_file glue/mnli/test_matched.pd.pkl \
-     --task mnli \
-     --batch_size 32 \
-     --num_accumulated 1 \
-     --ctx gpu0
+## Solve Text Classification Benchmarks
 
+```bash
 python run_text_classification.py \
      --do_train \
      --train_file glue/mnli/train.pd.pkl \
@@ -57,4 +37,6 @@ python run_text_classification.py \
 First of all, install the `kaggle` API toolkit following the documentation in 
 [Kaggle API Docs](https://www.kaggle.com/docs/api).
 
-### NLP 
+### NLP Beginner
+
+### Google 

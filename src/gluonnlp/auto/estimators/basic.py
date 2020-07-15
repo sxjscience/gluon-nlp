@@ -108,15 +108,15 @@ def base_optimization_config():
     cfg = CfgNode()
     cfg.lr_scheduler = 'poly_scheduler'
     cfg.optimizer = 'adamw'
-    cfg.model_average = 10
+    cfg.model_average = 5
     cfg.optimizer_params = [('beta1', 0.9),
                             ('beta2', 0.999),
                             ('epsilon', 1e-6),
                             ('correct_bias', False)]
     cfg.begin_lr = 0.0
-    cfg.batch_size = 32
+    cfg.batch_size = 64
     cfg.num_accumulated = 1
-    cfg.val_batch_size_mult = 2  # By default, we double the batch size for validation
+    cfg.val_batch_size_mult = 4  # By default, we double the batch size for validation
     cfg.lr = 1E-4
     cfg.final_lr = 0.0
     cfg.num_train_epochs = 10.0
@@ -125,7 +125,7 @@ def base_optimization_config():
     cfg.wd = 0.01  # Weight Decay
     cfg.max_grad_norm = 1.0  # Maximum Gradient Norm
     # The validation frequency = validation frequency * num_updates_in_an_epoch
-    cfg.valid_frequency = 0.5
+    cfg.valid_frequency = 0.2
     # Logging frequency = log frequency * num_updates_in_an_epoch
     cfg.log_frequency = 0.1
     return cfg
@@ -144,7 +144,7 @@ def base_tabular_model_config():
 
 def base_learning_config():
     cfg = CfgNode()
-    cfg.early_stopping_patience = 6  # Stop if we cannot find better checkpoints
+    cfg.early_stopping_patience = 5  # Stop if we cannot find better checkpoints
     cfg.valid_ratio = 0.15      # The ratio of dataset to split for validation
     cfg.stop_metric = 'auto'    # Automatically define the stopping metric
     cfg.log_metrics = 'auto'    # Automatically determine the metrics used in logging
@@ -155,7 +155,7 @@ def base_misc_config():
     cfg = CfgNode()
     cfg.seed = 123
     cfg.context = 'gpu0'
-    cfg.exp_dir = './bert_for_tabular'
+    cfg.exp_dir = './autonlp'
     return cfg
 
 
@@ -309,12 +309,8 @@ def _classification_regression_predict(net, dataloader, problem_type, ctx_l,
 
 @use_np
 class BertForTabularPredictionBasic(BaseEstimator):
-    def __init__(self, cfg=None):
-        if cfg is None:
-            cfg = BertForTabularPredictionBasic.get_cfg()
-        else:
-            cfg = BertForTabularPredictionBasic.get_cfg().clone_merge(cfg)
-        self._cfg = cfg
+    def __init__(self, config=None, logger=None, reporter=None):
+        super().__init__(config=config, logger=logger, reporter=reporter)
         self._called_fit = False
         self._problem_type = None
         self._label_shape = None
@@ -322,10 +318,6 @@ class BertForTabularPredictionBasic(BaseEstimator):
         self._preprocessor = None
         self._column_properties = None
         self._label = None
-
-    @property
-    def cfg(self):
-        return self._cfg
 
     @property
     def problem_type(self):
@@ -371,7 +363,7 @@ class BertForTabularPredictionBasic(BaseEstimator):
             The validation data.
         """
         self._label = label
-        cfg = self.cfg
+        cfg = self.config
         set_seed(cfg.MISC.seed)
         exp_dir = cfg.MISC.exp_dir
         logging_config(folder=exp_dir, name='train')
