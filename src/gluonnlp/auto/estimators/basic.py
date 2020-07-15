@@ -114,9 +114,9 @@ def base_optimization_config():
                             ('epsilon', 1e-6),
                             ('correct_bias', False)]
     cfg.begin_lr = 0.0
-    cfg.batch_size = 64
+    cfg.batch_size = 32
     cfg.num_accumulated = 1
-    cfg.val_batch_size_mult = 4  # By default, we double the batch size for validation
+    cfg.val_batch_size_mult = 2  # By default, we double the batch size for validation
     cfg.lr = 1E-4
     cfg.final_lr = 0.0
     cfg.num_train_epochs = 3.0
