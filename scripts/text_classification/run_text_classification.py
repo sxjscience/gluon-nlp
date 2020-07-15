@@ -69,10 +69,10 @@ def train(args):
         feature_columns, label_columns, stop_metric, eval_metrics = TASKS[args.task]
     else:
         raise NotImplementedError
-    if args.exp_dir is None:
-        args.exp_dir = '{}_{}'.format(args.task, args.backbone_name)
     if args.backbone_name is None:
         args.backbone_name = 'google_electra_base'
+    if args.exp_dir is None:
+        args.exp_dir = '{}_{}'.format(args.task, args.backbone_name)
     model = AutoNLP.fit(train_data=args.train_file,
                         feature_columns=feature_columns,
                         label=label_columns,
