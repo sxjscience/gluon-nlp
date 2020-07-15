@@ -611,7 +611,7 @@ class BertForTabularPredictionBasic(BaseEstimator):
 
     def _internal_predict(self, test_data, get_original_labels=True, get_probabilities=False):
         assert self.net is not None
-        cfg = self.cfg
+        cfg = self.config
         if not isinstance(test_data, TabularDataset):
             test_data = TabularDataset(test_data,
                                        column_properties=self._column_properties)
