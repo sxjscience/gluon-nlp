@@ -6,7 +6,8 @@ class BaseEstimator(abc.ABC):
         if config is None:
             self._config = self.get_cfg()
         else:
-            self._config = self.get_cfg().merge_clone(config)
+            base_config = self.get_cfg()
+            self._config = base_config.clone_merge(config)
         self._logger = logger
         self._reporter = reporter
 
