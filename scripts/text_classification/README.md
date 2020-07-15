@@ -37,6 +37,10 @@ python run_text_classification.py \
 First of all, install the `kaggle` API toolkit following the documentation in 
 [Kaggle API Docs](https://www.kaggle.com/docs/api).
 
-### NLP Beginner
+### NLP Beginner Challenge
+```bash
 
-### Google 
+```
+
+### Google QUEST Q&A Labeling 
+

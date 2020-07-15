@@ -1,6 +1,5 @@
 import mxnet as mx
 import os
-import pandas as pd
 import json
 import argparse
 from gluonnlp.auto.dataset import load_pandas_df

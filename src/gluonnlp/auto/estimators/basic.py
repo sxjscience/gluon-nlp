@@ -119,7 +119,7 @@ def base_optimization_config():
     cfg.val_batch_size_mult = 4  # By default, we double the batch size for validation
     cfg.lr = 1E-4
     cfg.final_lr = 0.0
-    cfg.num_train_epochs = 10.0
+    cfg.num_train_epochs = 3.0
     cfg.warmup_portion = 0.1
     cfg.layerwise_lr_decay = 0.8  # The layer_wise decay
     cfg.wd = 0.01  # Weight Decay
@@ -318,6 +318,7 @@ class BertForTabularPredictionBasic(BaseEstimator):
         self._preprocessor = None
         self._column_properties = None
         self._label = None
+        self._feature_columns = None
 
     @property
     def problem_type(self):
@@ -349,7 +350,7 @@ class BertForTabularPredictionBasic(BaseEstimator):
         else:
             raise NotImplementedError
 
-    def fit(self, train_data, label, valid_data=None):
+    def fit(self, train_data, label, feature_columns=None, valid_data=None):
         """
 
         Parameters
@@ -359,6 +360,8 @@ class BertForTabularPredictionBasic(BaseEstimator):
             Should be a format that can be converted to a tabular dataset
         label
             The label column
+        feature_columns
+            The feature columns
         valid_data
             The validation data.
         """
@@ -368,8 +371,16 @@ class BertForTabularPredictionBasic(BaseEstimator):
         exp_dir = cfg.MISC.exp_dir
         logging_config(folder=exp_dir, name='train')
         ctx_l = parse_ctx(cfg.MISC.context)
+        if feature_columns is None:
+            feature_columns = [ele for ele in train_data.columns if ele != label]
+        elif not isinstance(feature_columns, list):
+            feature_columns = [feature_columns]
+        self._feature_columns = feature_columns
+        all_columns = feature_columns + [label]
         if not isinstance(train_data, TabularDataset):
-            train_data = TabularDataset(train_data, label_columns=label)
+            train_data = TabularDataset(train_data,
+                                        columns=all_columns,
+                                        label_columns=label)
         column_properties = train_data.column_properties
         self._column_properties = column_properties
 
@@ -392,10 +403,11 @@ class BertForTabularPredictionBasic(BaseEstimator):
             log_metrics.append(stop_metric)
         logging.info('Stop Metric={}, Log Metrics={}'.format(stop_metric, log_metrics))
         if valid_data is None:
-            train_data, valid_data = random_split_train_val(
-                train_data,
-                label=label,
-                valid_ratio=cfg.LEARNING.valid_ratio)
+            train_df, valid_df = random_split_train_val(train_data.table,
+                                                        label=label,
+                                                        valid_ratio=cfg.LEARNING.valid_ratio)
+            train_data = TabularDataset(train_df, column_properties=column_properties)
+            valid_data = TabularDataset(valid_df, column_properties=column_properties)
         else:
             if not isinstance(valid_data, TabularDataset):
                 valid_data = TabularDataset(valid_data,
@@ -640,7 +652,9 @@ class BertForTabularPredictionBasic(BaseEstimator):
             The probabilities. Shape (#Samples, num_class)
         """
         assert self.problem_type == _C.CLASSIFICATION
-        return self._internal_predict(test_data, get_original_labels=False, get_probabilities=True)
+        return self._internal_predict(test_data,
+                                      get_original_labels=False,
+                                      get_probabilities=True)
 
     def predict(self, test_data, get_original_labels=True):
         """
@@ -648,6 +662,7 @@ class BertForTabularPredictionBasic(BaseEstimator):
         Parameters
         ----------
         test_data
+            tabular dataset
         get_original_labels
             Whether to get the original labels
 

@@ -67,18 +67,19 @@ def get_column_properties_from_metadata(metadata):
     return column_properties
 
 
-def random_split_train_val(dataset, label, valid_ratio=0.15,
-                           stratified=False, num_repeats=1, rng=None):
+def random_split_train_val(df, valid_ratio=0.15,
+                           stratified=False, label=None, num_repeats=1, rng=None):
     """Randomly split a given dataset into train + valid dataset with stratified sampling.
 
     Parameters
     ----------
-    dataset
-    label
+    df
     valid_ratio
     stratified
         Whether to use Stratified split.
         If it's a categorical column, we will split based on the categorical value.
+    label
+        The label column. Will be used if conducting stratified sampling
     num_repeats
         The number of repeats
     rng
@@ -98,50 +99,24 @@ def random_split_train_val(dataset, label, valid_ratio=0.15,
     if rng is None:
         rng = np.random.RandomState()
     if not stratified:
-        num_total = len(dataset.table)
+        num_total = len(df)
         num_valid = np.ceil(num_total * valid_ratio).astype('int')
         indices = np.arange(num_total)
         if num_repeats == 1:
             rng.shuffle(indices)
             valid_indices = indices[:num_valid]
             train_indices = indices[num_valid:]
-            train_dataset = TabularDataset(dataset.table.iloc[train_indices],
-                                           column_properties=dataset.column_properties)
-            valid_dataset = TabularDataset(dataset.table.iloc[valid_indices],
-                                           column_properties=dataset.column_properties)
-            return train_dataset, valid_dataset
+            return df.iloc[train_indices], df.iloc[valid_indices]
         else:
             out = []
             for i in range(num_repeats):
                 rng.shuffle(indices)
                 valid_indices = indices[:num_valid]
                 train_indices = indices[num_valid:]
-                train_dataset = TabularDataset(dataset.table.iloc[train_indices],
-                                               column_properties=dataset.column_properties)
-                valid_dataset = TabularDataset(dataset.table.iloc[valid_indices],
-                                               column_properties=dataset.column_properties)
-                out.append((train_dataset, valid_dataset))
+                out.append((df.iloc[train_indices], df.iloc[valid_indices]))
             return out
     else:
         raise NotImplementedError
-
-
-def kfold_split(dataset, label, n_folds=5, stratified=True, rng=None):
-    """
-
-    Parameters
-    ----------
-    dataset
-    label
-    n_folds
-    stratified
-    rng
-
-    Returns
-    -------
-
-    """
-    raise NotImplementedError
 
 
 def is_categorical_column(data: pd.Series,
@@ -354,7 +329,7 @@ class TabularDataset:
         """
         df = load_pandas_df(path_or_df)
         if columns is not None:
-            if isinstance(columns, str):
+            if not isinstance(columns, list):
                 columns = [columns]
             df = df[columns]
         df = normalize_df(df)
