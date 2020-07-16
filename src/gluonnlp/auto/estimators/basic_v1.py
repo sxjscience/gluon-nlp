@@ -120,7 +120,7 @@ def base_optimization_config():
     cfg.begin_lr = 0.0
     cfg.batch_size = 32
     cfg.model_average = 5
-    cfg.num_accumulated = 1
+    cfg.num_accumulated = 2
     cfg.val_batch_size_mult = 2  # By default, we double the batch size for validation
     cfg.lr = 1E-4
     cfg.final_lr = 0.0
@@ -177,6 +177,7 @@ def base_cfg():
 
 @v1_prebuild_search_space.register()
 def electra_base_fixed():
+    """The search space of Electra Base"""
     cfg = base_cfg()
     cfg.defrost()
     cfg.OPTIMIZATION.layerwise_lr_decay = 0.8
@@ -186,12 +187,13 @@ def electra_base_fixed():
 
 @v1_prebuild_search_space.register()
 def mobile_bert_fixed():
-    """The search space in which """
+    """The search space of MobileBERT"""
     cfg = base_cfg()
     cfg.defrost()
     cfg.OPTIMIZATION.layerwise_lr_decay = -1
     cfg.BACKBONE.name = 'google_uncased_mobilebert'
     cfg.OPTIMIZATION.lr = 1E-5
+    cfg.OPTIMIZATION.num_train_epochs = 5.0
     cfg.freeze()
     return cfg
 
@@ -380,9 +382,9 @@ class BertForTabularPredictionBasic(BaseEstimator):
         cfg
         """
         if key is None:
-            return base_cfg()
+            return electra_base_fixed()
         else:
-            raise NotImplementedError
+            return v1_prebuild_search_space.get(key)
 
     def fit(self, train_data, label, feature_columns=None, valid_data=None,
             time_limits=None):

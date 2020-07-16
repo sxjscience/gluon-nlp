@@ -5,8 +5,10 @@ from .estimators.basic_v1 import BertForTabularPredictionBasic
 class AutoNLP:
     @staticmethod
     def fit(train_data,
-            valid_data=None, feature_columns=None,
-            label=None, valid_ratio=0.15,
+            valid_data=None,
+            feature_columns=None,
+            label=None,
+            valid_ratio=0.15,
             exp_dir='./autonlp',
             stop_metric=None,
             eval_metrics=None,
@@ -18,9 +20,13 @@ class AutoNLP:
         Parameters
         ----------
         train_data
+            Training dataset
         valid_data
+            Validation dataset
         feature_columns
+            The feature columns
         label
+            Name of the label column
         valid_ratio
             Valid ratio
         exp_dir
@@ -32,9 +38,10 @@ class AutoNLP:
         log_metrics
             The logging metrics
         time_limits
-            The time limits
+            The time limits.
         hyperparameters
-            Hyperparameters of the search function. May include the confi
+            The hyper-parameters of the fit function. It will include the configuration of
+            the search space.
 
         Returns
         -------
