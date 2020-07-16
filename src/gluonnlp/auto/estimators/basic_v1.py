@@ -24,7 +24,7 @@ from ...utils.registry import Registry
 from .base import BaseEstimator
 from ..dataset import TabularDataset, random_split_train_val
 
-v1_prebuild_config = Registry('v1_prebuild_search_space')
+v1_prebuild_config = Registry('v1_prebuild_config')
 
 
 @use_np
@@ -175,7 +175,7 @@ def base_cfg():
     return cfg
 
 
-@v1_prebuild_search_space.register()
+@v1_prebuild_config.register()
 def electra_base_fixed():
     """The search space of Electra Base"""
     cfg = base_cfg()
@@ -185,7 +185,7 @@ def electra_base_fixed():
     return cfg
 
 
-@v1_prebuild_search_space.register()
+@v1_prebuild_config.register()
 def mobile_bert_fixed():
     """The search space of MobileBERT"""
     cfg = base_cfg()
