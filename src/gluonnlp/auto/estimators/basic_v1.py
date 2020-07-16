@@ -342,11 +342,11 @@ def _classification_regression_predict(net, dataloader, problem_type, ctx_l,
 
 
 @use_np
-class BertForTabularPredictionBasic(BaseEstimator):
+class BertForTextPredictionBasic(BaseEstimator):
     def __init__(self, config=None, logger=None, reporter=None):
-        super(BertForTabularPredictionBasic, self).__init__(config=config,
-                                                            logger=logger,
-                                                            reporter=reporter)
+        super(BertForTextPredictionBasic, self).__init__(config=config,
+                                                         logger=logger,
+                                                         reporter=reporter)
         self._problem_type = None
         self._net = None
         self._preprocessor = None

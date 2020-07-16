@@ -572,3 +572,24 @@ def num_mp_workers(max_worker=4):
     """
     import multiprocessing as mp
     return min(mp.cpu_count(), max_worker)
+
+
+def num_gpus():
+    """Get the total number of GPUs available
+
+    Returns
+    -------
+    gpu_count
+        The number of GPUs
+    """
+    import mxnet as mx
+    gpu_count = 0
+    while True:
+        try:
+            arr = mx.np.array(1.0, ctx=mx.gpu(gpu_count))
+            gpu_count += 1
+        except Exception:
+            break
+        finally:
+            break
+    return gpu_count

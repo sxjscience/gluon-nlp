@@ -1,5 +1,5 @@
 from .dataset import load_pandas_df, random_split_train_val, TabularDataset
-from .estimators.basic_v1 import BertForTabularPredictionBasic
+from .estimators.basic_v1 import BertForTextPredictionBasic
 
 
 class AutoNLP:
@@ -14,6 +14,7 @@ class AutoNLP:
             eval_metrics=None,
             log_metrics=None,
             time_limits=5 * 60 * 60,
+            num_gpus=None,
             hyperparameters=None):
         """
 
@@ -39,6 +40,8 @@ class AutoNLP:
             The logging metrics
         time_limits
             The time limits.
+        num_gpus
+            The number of GPUs to use for the fit job. By default, we will
         hyperparameters
             The hyper-parameters of the fit function. It will include the configuration of
             the search space.
@@ -79,7 +82,7 @@ class AutoNLP:
         valid_data = TabularDataset(valid_data,
                                     columns=used_columns,
                                     column_properties=column_properties)
-        cfg = BertForTabularPredictionBasic.get_cfg()
+        cfg = BertForTextPredictionBasic.get_cfg()
         cfg.defrost()
         if exp_dir is not None:
             cfg.MISC.exp_dir = exp_dir
@@ -88,7 +91,7 @@ class AutoNLP:
         if stop_metric is not None:
             cfg.LEARNING.stop_metric = stop_metric
         cfg.freeze()
-        estimator = BertForTabularPredictionBasic(cfg)
+        estimator = BertForTextPredictionBasic(cfg)
         estimator.fit(train_data=train_data, valid_data=valid_data,
                       feature_columns=feature_columns,
                       label=label)
@@ -104,6 +107,7 @@ class AutoNLP:
 
         Returns
         -------
-
+        model
+            The loaded model
         """
-        BertForTabularPredictionBasic.load(dir_path)
+        BertForTextPredictionBasic.load(dir_path)
