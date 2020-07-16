@@ -5,7 +5,8 @@ import pandas as pd
 import json
 from . import constants as _C
 from .column_property import CategoricalColumnProperty, EntityColumnProperty,\
-                             TextColumnProperty, NumericalColumnProperty
+                             TextColumnProperty, NumericalColumnProperty,\
+    get_column_properties_from_metadata
 from ..base import INT_TYPES, FLOAT_TYPES, BOOL_TYPES
 from typing import List, Optional, Union, Dict, Tuple
 
@@ -27,44 +28,6 @@ def load_pandas_df(data: Union[str, pd.DataFrame]):
         return df
     else:
         raise Exception(loading_error)
-
-
-def get_column_properties_from_metadata(metadata):
-    """Generate the column properties from metadata
-
-    Parameters
-    ----------
-    metadata
-        The path to the metadata json file. Or the loaded meta data
-
-    Returns
-    -------
-    column_properties
-        The column properties
-    """
-    column_properties = collections.OrderedDict()
-    if metadata is None:
-        return column_properties
-    if isinstance(metadata, str):
-        with open(metadata, 'r', encoding='utf-8') as f:
-            metadata = json.load(f)
-    else:
-        assert isinstance(metadata, dict)
-    for col_name in metadata:
-        col_type = metadata[col_name]['type']
-        col_attrs = metadata[col_name]['attrs']
-        if col_type == _C.TEXT:
-            column_properties[col_name] = TextColumnProperty(**col_attrs)
-        elif col_type == _C.ENTITY:
-            column_properties[col_name] = EntityColumnProperty(**col_attrs)
-        elif col_type == _C.NUMERICAL:
-            column_properties[col_name] = NumericalColumnProperty(**col_attrs)
-        elif col_type == _C.CATEGORICAL:
-            column_properties[col_name] = CategoricalColumnProperty(**col_attrs)
-        else:
-            raise KeyError('Column type is not supported.'
-                           ' Type="{}"'.format(col_type))
-    return column_properties
 
 
 def random_split_train_val(df, valid_ratio=0.15,

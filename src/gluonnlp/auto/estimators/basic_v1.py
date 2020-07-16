@@ -13,7 +13,7 @@ from sklearn.metrics import accuracy_score, f1_score, matthews_corrcoef, roc_auc
 from scipy.stats import pearsonr, spearmanr
 from .. import constants as _C
 from ...models import get_backbone
-from ..column_property import get_column_property_metadata
+from ..column_property import get_column_property_metadata, get_column_properties_from_metadata
 from ..preprocessing import TabularBasicBERTPreprocessor
 from ...lr_scheduler import InverseSquareRootScheduler
 from ..modules.classification import BERTForTabularBasicV1
@@ -347,13 +347,12 @@ class BertForTabularPredictionBasic(BaseEstimator):
         super(BertForTabularPredictionBasic, self).__init__(config=config,
                                                             logger=logger,
                                                             reporter=reporter)
-        self._called_fit = False
         self._problem_type = None
-        self._label_shape = None
         self._net = None
         self._preprocessor = None
         self._column_properties = None
         self._label = None
+        self._label_shape = None
         self._feature_columns = None
 
     @property
@@ -363,6 +362,10 @@ class BertForTabularPredictionBasic(BaseEstimator):
     @property
     def label_shape(self):
         return self._label_shape
+
+    @property
+    def label(self):
+        return self._label
 
     @property
     def net(self):
@@ -683,6 +686,7 @@ class BertForTabularPredictionBasic(BaseEstimator):
         Parameters
         ----------
         test_data
+            The test data
 
         Returns
         -------
@@ -728,6 +732,12 @@ class BertForTabularPredictionBasic(BaseEstimator):
         with open(os.path.join(dir_path, 'column_metadata.json'), 'w') as of:
             json.dump(get_column_property_metadata(self._column_properties),
                       of, ensure_ascii=True)
+        with open(os.path.join(dir_path, 'assets.json'), 'w') as of:
+            json.dump({'label': self._label,
+                       'label_shape': self._label_shape,
+                       'problem_type': self._problem_type,
+                       'feature_columns': self._feature_columns},
+                      of, ensure_ascii=True)
 
     @classmethod
     def load(cls, dir_path):
@@ -736,9 +746,35 @@ class BertForTabularPredictionBasic(BaseEstimator):
         Parameters
         ----------
         dir_path
+            The directory path
 
         Returns
         -------
-
+        model
         """
-        raise NotImplementedError
+        loaded_config = cls.get_cfg().clone_merge(os.path.join(dir_path, 'cfg.yml'))
+        model = cls(loaded_config)
+        with open(os.path.join(dir_path, 'assets.json'), 'r') as f:
+            assets = json.load(f)
+        model._label = assets['label']
+        model._label_shape = assets['label_shape']
+        model._problem_type = assets['problem_type']
+        model._feature_columns = assets['feature_columns']
+        backbone_model_cls, backbone_cfg, tokenizer, backbone_params_path, _ \
+            = get_backbone(loaded_config.MODEL.BACKBONE.name)
+        model._column_properties = get_column_properties_from_metadata(
+            os.path.join(dir_path, 'column_metadata.json'))
+        # Initialize the preprocessor
+        preprocessor = TabularBasicBERTPreprocessor(
+            tokenizer=tokenizer,
+            column_properties=model.column_properties,
+            label_columns=model._label,
+            max_length=model.config.MODEL.PREPROCESS.max_length,
+            merge_text=model.config.MODEL.PREPROCESS.merge_text)
+        text_backbone = backbone_model_cls.from_cfg(backbone_cfg)
+        model._preprocessor = preprocessor
+        model._net = BERTForTabularBasicV1(text_backbone=text_backbone,
+                                           feature_field_info=preprocessor.feature_field_info(),
+                                           label_shape=model.label_shape,
+                                           cfg=loaded_config.MODEL.NETWORK)
+        return model

@@ -19,8 +19,9 @@ def test_tabular_nlp_snli_dataset():
     assert dataset.column_properties['sentence1_entity_categorical'].type == _C.ENTITY
     assert dataset.column_properties['sentence2_entity'].type == _C.ENTITY
     assert dataset.column_properties['label'].type == _C.CATEGORICAL
+    column_metadata = get_column_property_metadata(dataset.column_properties)
     new_dataset1 = TabularDataset(snli_sample_df.iloc[:10],
-                                  column_metadata=dataset.column_metadata())
+                                  column_metadata=column_metadata)
     new_dataset2 = TabularDataset(snli_sample_df.iloc[:10],
                                   column_properties=dataset.column_properties)
     assert new_dataset1.columns == dataset.columns

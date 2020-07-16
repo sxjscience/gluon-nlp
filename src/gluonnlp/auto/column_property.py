@@ -600,3 +600,41 @@ def get_column_property_metadata(column_properties):
         metadata[col_name] = {'type': col_prop.type,
                               'attrs': col_prop.get_attributes()}
     return metadata
+
+
+def get_column_properties_from_metadata(metadata):
+    """Generate the column properties from metadata
+
+    Parameters
+    ----------
+    metadata
+        The path to the metadata json file. Or the loaded meta data
+
+    Returns
+    -------
+    column_properties
+        The column properties
+    """
+    column_properties = collections.OrderedDict()
+    if metadata is None:
+        return column_properties
+    if isinstance(metadata, str):
+        with open(metadata, 'r', encoding='utf-8') as f:
+            metadata = json.load(f)
+    else:
+        assert isinstance(metadata, dict)
+    for col_name in metadata:
+        col_type = metadata[col_name]['type']
+        col_attrs = metadata[col_name]['attrs']
+        if col_type == _C.TEXT:
+            column_properties[col_name] = TextColumnProperty(**col_attrs)
+        elif col_type == _C.ENTITY:
+            column_properties[col_name] = EntityColumnProperty(**col_attrs)
+        elif col_type == _C.NUMERICAL:
+            column_properties[col_name] = NumericalColumnProperty(**col_attrs)
+        elif col_type == _C.CATEGORICAL:
+            column_properties[col_name] = CategoricalColumnProperty(**col_attrs)
+        else:
+            raise KeyError('Column type is not supported.'
+                           ' Type="{}"'.format(col_type))
+    return column_properties
