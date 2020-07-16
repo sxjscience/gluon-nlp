@@ -724,7 +724,7 @@ class BertForTabularPredictionBasic(BaseEstimator):
         os.makedirs(dir_path, exist_ok=True)
         self.net.save_parameters(os.path.join(dir_path, 'net.params'))
         with open(os.path.join(dir_path, 'cfg.yml'), 'w') as of:
-            of.write(self.cfg.dump())
+            of.write(self.config.dump())
         with open(os.path.join(dir_path, 'column_metadata.json'), 'w') as of:
             json.dump(get_column_property_metadata(self._column_properties),
                       of, ensure_ascii=True)
