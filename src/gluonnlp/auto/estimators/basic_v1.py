@@ -5,6 +5,7 @@ import logging
 import time
 import json
 import mxnet as mx
+import autogluon as ag
 from mxnet.util import use_np
 from mxnet.lr_scheduler import PolyScheduler, CosineScheduler
 from mxnet.gluon.data import DataLoader
@@ -19,15 +20,18 @@ from ..modules.classification import BERTForTabularBasicV1
 from ...utils.config import CfgNode
 from ...utils.misc import set_seed, logging_config, parse_ctx, grouper, count_parameters, repeat
 from ...utils.parameter import move_to_ctx, clip_grad_global_norm
+from ...utils.registry import Registry
 from .base import BaseEstimator
 from ..dataset import TabularDataset, random_split_train_val
+
+v1_prebuild_search_space = Registry('v1_prebuild_search_space')
 
 
 @use_np
 def get_optimizer(cfg, updates_per_epoch):
     max_update = int(updates_per_epoch * cfg.num_train_epochs)
     warmup_steps = int(updates_per_epoch * cfg.num_train_epochs * cfg.warmup_portion)
-    if cfg.lr_scheduler == 'poly_scheduler':
+    if cfg.lr_scheduler == 'triangular':
         assert warmup_steps < max_update
         lr_scheduler = PolyScheduler(max_update=max_update,
                                      base_lr=cfg.lr,
@@ -105,23 +109,24 @@ def apply_layerwise_decay(model, layerwise_decay, not_included=None):
 
 
 def base_optimization_config():
+    """The basic optimization phase"""
     cfg = CfgNode()
-    cfg.lr_scheduler = 'poly_scheduler'
+    cfg.lr_scheduler = 'triangular'
     cfg.optimizer = 'adamw'
-    cfg.model_average = 5
     cfg.optimizer_params = [('beta1', 0.9),
                             ('beta2', 0.999),
                             ('epsilon', 1e-6),
                             ('correct_bias', False)]
     cfg.begin_lr = 0.0
     cfg.batch_size = 32
+    cfg.model_average = 5
     cfg.num_accumulated = 1
     cfg.val_batch_size_mult = 2  # By default, we double the batch size for validation
     cfg.lr = 1E-4
     cfg.final_lr = 0.0
-    cfg.num_train_epochs = 4.0
+    cfg.num_train_epochs = 3.0
     cfg.warmup_portion = 0.1
-    cfg.layerwise_lr_decay = 0.8  # The layer_wise decay
+    cfg.layerwise_lr_decay = -1  # The layer_wise decay
     cfg.wd = 0.01  # Weight Decay
     cfg.max_grad_norm = 1.0  # Maximum Gradient Norm
     # The validation frequency = validation frequency * num_updates_in_an_epoch
@@ -131,7 +136,7 @@ def base_optimization_config():
     return cfg
 
 
-def base_tabular_model_config():
+def base_model_config():
     cfg = CfgNode()
     cfg.PREPROCESS = CfgNode()
     cfg.PREPROCESS.merge_text = True
@@ -164,8 +169,30 @@ def base_cfg():
     cfg.VERSION = 1
     cfg.OPTIMIZATION = base_optimization_config()
     cfg.LEARNING = base_learning_config()
-    cfg.MODEL = base_tabular_model_config()
+    cfg.MODEL = base_model_config()
     cfg.MISC = base_misc_config()
+    cfg.freeze()
+    return cfg
+
+
+@v1_prebuild_search_space.register()
+def electra_base_fixed():
+    cfg = base_cfg()
+    cfg.defrost()
+    cfg.OPTIMIZATION.layerwise_lr_decay = 0.8
+    cfg.freeze()
+    return cfg
+
+
+@v1_prebuild_search_space.register()
+def mobile_bert_fixed():
+    """The search space in which """
+    cfg = base_cfg()
+    cfg.defrost()
+    cfg.OPTIMIZATION.layerwise_lr_decay = -1
+    cfg.BACKBONE.name = 'google_uncased_mobilebert'
+    cfg.OPTIMIZATION.lr = 1E-5
+    cfg.freeze()
     return cfg
 
 
@@ -210,7 +237,8 @@ def calculate_metric_scores(metrics, predictions, gt_labels,
 
     Returns
     -------
-
+    metric_scores
+        A dictionary contains key --> metric scores
     """
     if isinstance(metrics, str):
         metrics = [metrics]
@@ -254,12 +282,16 @@ def is_better_score(metric_name, baseline, new_score):
     Parameters
     ----------
     metric_name
+        Name of the metric
     baseline
+        The baseline score
     new_score
+        The new score
 
     Returns
     -------
     ret
+        Whether the new score is better than the baseline
     """
     if metric_name in ['acc', 'f1', 'mcc', 'auc', 'pearsonr', 'spearmanr']:
         return new_score > baseline
@@ -352,8 +384,9 @@ class BertForTabularPredictionBasic(BaseEstimator):
         else:
             raise NotImplementedError
 
-    def fit(self, train_data, label, feature_columns=None, valid_data=None):
-        """
+    def fit(self, train_data, label, feature_columns=None, valid_data=None,
+            time_limits=None):
+        """Fit the train data with the given label
 
         Parameters
         ----------
@@ -365,8 +398,11 @@ class BertForTabularPredictionBasic(BaseEstimator):
         feature_columns
             The feature columns
         valid_data
-            The validation data.
+            The validation data
+        time_limits
+            The time limits in seconds
         """
+        fit_start_tick = time.time()
         self._label = label
         cfg = self.config
         set_seed(cfg.MISC.seed)
@@ -501,11 +537,13 @@ class BertForTabularPredictionBasic(BaseEstimator):
                                               + log_metrics + ['find_better', 'time_spent']) + '\n')
         mx.npx.waitall()
         no_better_rounds = 0
+        num_grad_accum = cfg.OPTIMIZATION.num_accumulated
         for update_idx in range(max_update):
             num_samples_per_update_l = [0 for _ in ctx_l]
-            for accum_idx in range(cfg.OPTIMIZATION.num_accumulated):
+            for accum_idx in range(num_grad_accum):
                 sample_l = next(train_loop_dataloader)
                 loss_l = []
+                num_samples_l = [0 for _ in ctx_l]
                 for i, (sample, ctx) in enumerate(zip(sample_l, ctx_l)):
                     feature_batch, label_batch = sample
                     feature_batch = move_to_ctx(feature_batch, ctx)
@@ -517,26 +555,20 @@ class BertForTabularPredictionBasic(BaseEstimator):
                             loss = - mx.npx.pick(logits, label_batch[0])
                         elif problem_type == _C.REGRESSION:
                             loss = mx.np.square(pred - label_batch[0])
-                        loss_l.append(loss.sum())
+                        loss_l.append(loss.mean() / len(ctx_l))
+                        num_samples_l[i] = loss.shape[0]
                         num_samples_per_update_l[i] += loss.shape[0]
                 for loss in loss_l:
                     loss.backward()
                 for i in range(len(ctx_l)):
-                    log_loss_l[i] += loss_l[i]
+                    log_loss_l[i] += loss_l[i] * len(ctx_l) * num_samples_l[i]
                     log_num_samples_l[i] += num_samples_per_update_l[i]
             # Begin to update
             trainer.allreduce_grads()
-            # Here, the accumulated gradients are
-            # \sum_{n=1}^N g_n / batch_size
-            # Thus, in order to clip the average gradient
-            #   \frac{1}{N} \sum_{n=1}^N      -->  clip to args.max_grad_norm
-            # We need to change the ratio to be
-            #  \sum_{n=1}^N g_n / batch_size  -->  clip to args.max_grad_norm  * N / batch_size
             num_samples_per_update = sum(num_samples_per_update_l)
             total_norm, ratio, is_finite = \
-                clip_grad_global_norm(params,
-                                      cfg.OPTIMIZATION.max_grad_norm * num_samples_per_update)
-            total_norm = total_norm / num_samples_per_update
+                clip_grad_global_norm(params, cfg.OPTIMIZATION.max_grad_norm * num_grad_accum)
+            total_norm = total_norm / num_grad_accum
             trainer.update(num_samples_per_update)
 
             # Clear after update
@@ -545,17 +577,19 @@ class BertForTabularPredictionBasic(BaseEstimator):
             if (update_idx + 1) % train_log_interval == 0:
                 log_loss = sum([ele.as_in_ctx(ctx_l[0]) for ele in log_loss_l]).asnumpy()
                 log_num_samples = sum(log_num_samples_l)
-                avg_log_loss = log_loss / log_num_samples * batch_size
                 logging.info(
                     '[Iter {}/{}, Epoch {}] train loss={}, gnorm={}, lr={}, #samples processed={},'
                     ' #sample per second={}'
                     .format(update_idx + 1, max_update, int(update_idx / updates_per_epoch),
-                            avg_log_loss, total_norm, trainer.learning_rate,
+                            log_loss / log_num_samples, total_norm, trainer.learning_rate,
                             log_num_samples,
                             log_num_samples / (time.time() - logging_start_tick)))
                 logging_start_tick = time.time()
                 log_loss_l = [mx.np.array(0.0, dtype=np.float32, ctx=ctx) for ctx in ctx_l]
                 log_num_samples_l = [0 for _ in ctx_l]
+                if time.time() - fit_start_tick > time_limits:
+                    logging.info('Reached time limit. Stop!')
+                    break
             if (update_idx + 1) % valid_interval == 0 or (update_idx + 1) == max_update:
                 valid_start_tick = time.time()
                 dev_predictions = _classification_regression_predict(net, dataloader=dev_dataloader,

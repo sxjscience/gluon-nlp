@@ -1,5 +1,5 @@
 from .dataset import load_pandas_df, random_split_train_val, TabularDataset
-from .estimators.basic import BertForTabularPredictionBasic
+from .estimators.basic_v1 import BertForTabularPredictionBasic
 
 
 class AutoNLP:
@@ -11,9 +11,8 @@ class AutoNLP:
             stop_metric=None,
             eval_metrics=None,
             log_metrics=None,
-            time_limits=3,
-            hyperparameters=None,
-            network_configs='google_electra_base'):
+            time_limits=5 * 60 * 60,
+            hyperparameters=None):
         """
 
         Parameters
@@ -32,14 +31,15 @@ class AutoNLP:
             How you may potentially evaluate the model
         log_metrics
             The logging metrics
-        timelimits
-
-        network_configs
+        time_limits
+            The time limits
+        hyperparameters
+            Hyperparameters of the search function. May include the confi
 
         Returns
         -------
         estimator
-            An estimator with fit called
+            An estimator object
         """
         train_data = load_pandas_df(train_data)
         if label is None:
@@ -80,8 +80,6 @@ class AutoNLP:
             cfg.LEARNING.log_metrics = log_metrics
         if stop_metric is not None:
             cfg.LEARNING.stop_metric = stop_metric
-        if backbone_name is not None:
-            cfg.MODEL.BACKBONE.name = backbone_name
         cfg.freeze()
         estimator = BertForTabularPredictionBasic(cfg)
         estimator.fit(train_data=train_data, valid_data=valid_data,
