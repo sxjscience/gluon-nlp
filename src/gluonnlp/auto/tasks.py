@@ -1,3 +1,4 @@
+from ..utils.misc import get_num_gpus
 from .dataset import load_pandas_df, random_split_train_val, TabularDataset
 from .estimators.basic_v1 import BertForTextPredictionBasic
 
@@ -82,6 +83,10 @@ class AutoNLP:
         valid_data = TabularDataset(valid_data,
                                     columns=used_columns,
                                     column_properties=column_properties)
+        if num_gpus is None:
+            num_gpus = get_num_gpus()
+        if 'search_space' in hyperparameters:
+            search_space = hyperparameters['search_space']
         cfg = BertForTextPredictionBasic.get_cfg()
         cfg.defrost()
         if exp_dir is not None:

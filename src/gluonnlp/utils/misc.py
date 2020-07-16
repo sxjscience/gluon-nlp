@@ -574,7 +574,7 @@ def num_mp_workers(max_worker=4):
     return min(mp.cpu_count(), max_worker)
 
 
-def num_gpus():
+def get_num_gpus():
     """Get the total number of GPUs available
 
     Returns
@@ -587,6 +587,7 @@ def num_gpus():
     while True:
         try:
             arr = mx.np.array(1.0, ctx=mx.gpu(gpu_count))
+            arr.asnumpy()
             gpu_count += 1
         except Exception:
             break

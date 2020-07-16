@@ -78,8 +78,7 @@ def train(args):
                         label=label_columns,
                         exp_dir=args.exp_dir,
                         stop_metric=stop_metric,
-                        eval_metrics=eval_metrics,
-                        hyperparameters={''})
+                        eval_metrics=eval_metrics)
     dev_metrics_scores = model.evaluate(args.dev_file, metrics=eval_metrics)
     with open(os.path.join(args.exp_dir, 'final_model_dev_score.json'), 'w') as of:
         json.dump(dev_metrics_scores, of)
