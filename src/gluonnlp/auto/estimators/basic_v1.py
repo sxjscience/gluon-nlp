@@ -24,7 +24,7 @@ from ...utils.registry import Registry
 from .base import BaseEstimator
 from ..dataset import TabularDataset, random_split_train_val
 
-v1_prebuild_search_space = Registry('v1_prebuild_search_space')
+v1_prebuild_config = Registry('v1_prebuild_search_space')
 
 
 @use_np
