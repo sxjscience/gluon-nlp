@@ -16,8 +16,8 @@ into a text-to-text problem. However, it is difficult to convert tasks like sent
 match, or named-entity recognition into text-to-text, because they involve real-values or text 
 spans that are difficult to be encoded as raw text data.
 
-In GluonNLP, we propose a unified way to tackle these NLP problems. We convert these datasets 
-as tables. Each column in the table will be 1) raw text, 2) entity/list of entities associated with the 
+In GluonNLP, we convert these datasets as tables. 
+Each column in the table will be 1) raw text, 2) entity/list of entities associated with the 
 raw text, 3) numerical values or a list of numerical values. 
 In addition, we keep a metadata object that describes 1) the relationship among columns, 
 2) certain properties of the columns.
@@ -89,10 +89,10 @@ nlp_data prepare_glue --benchmark superglue
 | ReCoRD   | 101k    | 10k  | 10k         | source, text, entities, query, **answers** | QA           | F1/EM                        | news                            |
 | RTE      | 2.5k    | 278  | 3k          | premise, hypothesis, **label**  | NLI          | acc.                         | news, Wikipedia                 |
 | WiC      | 6k    | 638  | 1.4k          | sentence1, sentence2, entities1, entities2, **label**  | WSD          | acc.                         | WordNet, VerbNet, Wiktionary    |
-| WSC      | 554     | 104  | 146         | text, entities, **label**  | coref.       | acc.                         | fiction books                   |
+| WSC      | 554     | 104  | 146         | text, noun, pronoun, **label**  | coref.       | acc.                         | fiction books                   |
 
 *Note that for MultiRC, we enumerated all combinations of (passage, question, answer) triplets in 
-the dataset and the number of samples in the expanded format is recorded inside parenthesis.
+the dataset. The number of samples in the expanded format is recorded inside parenthesis.
 
 Similar to GLUE, SuperGLUE has two diagnostic tasks to analyze the system performance 
 on a broad range of linguistic phenomena. For more details, 
@@ -102,3 +102,18 @@ see [SuperGLUE Diagnostic](https://super.gluebenchmark.com/diagnostics).
 |---------------|----------|----------------------|----------------|
 | Winogender    | 356 |hypothesis, premise, label | Accuracy       |
 | Broadcoverage | 1104  | label, sentence1, sentence2, logic | Matthews corr. |
+
+## Text Classification
+
+We also provide the script to download a series of text classification datasets for the 
+purpose of benchmarking.
+
+| Dataset  | #Train  | #Dev | #Test   |
+|----------|---------|------|---------|
+| IMDB     |         |      |         |
+
+References:
+
+[1] 
+[2] 
+[3] 

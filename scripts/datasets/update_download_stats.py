@@ -108,7 +108,7 @@ if __name__ == '__main__':
                       save_path=os.path.join(_CHECK_SUM_BASE, 'hotpotqa.txt'))
     get_hash_and_size(triviaqa_url,
                       save_path=os.path.join(_CHECK_SUM_BASE, 'triviaqa.txt'))
-    get_hash_and_size(searchqa_url,
+    get_hash_and_size(searchqa_urls,
                       save_path=os.path.join(_CHECK_SUM_BASE, 'searchqa.txt'))
     get_hash_and_size(lm_urls,
                       save_path=os.path.join(_CHECK_SUM_BASE, 'language_model.txt'))
