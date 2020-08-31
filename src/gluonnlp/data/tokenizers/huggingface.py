@@ -11,6 +11,9 @@ from .base import *
 from ..vocab import Vocab, load_vocab
 from ...utils.lazy_imports import try_import_huggingface_tokenizers
 
+# Disable the TOKENIZERS_PARALLEL as suggested by the huggingface.
+os.environ['TOKENIZERS_PARALLELISM'] = 'false'
+
 
 def is_new_version_model_file(model_file_path: str) -> bool:
     """Check whether the model file belongs to the new version of HuggingFace Tokenizers,
