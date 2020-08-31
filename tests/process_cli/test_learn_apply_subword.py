@@ -16,7 +16,9 @@ def get_test_pair_corpus(key='de-en'):
         raise NotImplementedError
 
 
-def verify_subword_algorithms_ende(dir_path):
+def test_subword_algorithms_ende():
+    dir_path = os.path.join(_CURR_DIR, 'learn_apply_subword_results')
+    os.makedirs(dir_path, exist_ok=True)
     dir_path = os.path.realpath(dir_path)
     parser = learn_subword.get_parser()
     apply_parser = apply_subword.get_parser()
@@ -65,7 +67,3 @@ def verify_subword_algorithms_ende(dir_path):
                 with open('{}'.format(prefix_fname), 'r') as in_f:
                     for line in in_f:
                         out_f.write(tokenizer.decode(line.split()) + '\n')
-
-
-if __name__ == '__main__':
-    verify_subword_algorithms_ende('.')
