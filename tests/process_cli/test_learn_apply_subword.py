@@ -60,7 +60,7 @@ def verify_subword_algorithms_ende(dir_path):
 
         # Decode back with the trained tokenizer
         for prefix_fname in ['wmt19-test-de-en.de.{}'.format(model),
-                             'wmt19-test-de-en.de.{}'.format(model)]:
+                             'wmt19-test-de-en.en.{}'.format(model)]:
             with open('{}.decode'.format(prefix_fname), 'w', encoding='utf-8') as out_f:
                 with open('{}'.format(prefix_fname), 'r') as in_f:
                     for line in in_f:
