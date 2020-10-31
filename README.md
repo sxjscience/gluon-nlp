@@ -9,6 +9,7 @@ GluonNLP: Your Choice of Deep Learning for NLP
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"></a>
     <a href="https://github.com/dmlc/gluonnlp/actions"><img src="https://img.shields.io/badge/python-3.6%2C3.7%2C3.8-blue.svg"></a>
     <a href="https://pypi.org/project/gluonnlp/#history"><img src="https://img.shields.io/pypi/v/gluonnlp.svg"></a>
+    <a href="https://hub.docker.com/r/gluonai/gluon-nlp"><img src="https://img.shields.io/docker/pulls/gluonai/gluon-nlp"></a>
 </p>
 
 GluonNLP is a toolkit that helps you solve NLP problems. It provides easy-to-use tools that helps you load the text data, 
