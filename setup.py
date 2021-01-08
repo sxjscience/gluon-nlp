@@ -6,7 +6,7 @@ import re
 import shutil
 import sys
 from setuptools import setup, find_packages
-
+print('helloworld')
 
 def read(*names, **kwargs):
     with io.open(
